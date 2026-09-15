@@ -28,6 +28,8 @@ export function Login() {
     const client = getSupabase();
     if (!client) return;
 
+    // Preserve the non-null narrowing inside the nested async function.
+    const recoveryClient = client;
     let cancelled = false;
 
     async function establishRecoverySession() {
@@ -53,16 +55,16 @@ export function Login() {
         const refreshToken = hash.get("refresh_token");
 
         if (code) {
-          const { error } = await client.auth.exchangeCodeForSession(code);
+          const { error } = await recoveryClient.auth.exchangeCodeForSession(code);
           if (error) throw new Error(friendlySupabaseError(error));
         } else if (accessToken && refreshToken) {
-          const { error } = await client.auth.setSession({
+          const { error } = await recoveryClient.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
           if (error) throw new Error(friendlySupabaseError(error));
         } else {
-          const { data } = await client.auth.getSession();
+          const { data } = await recoveryClient.auth.getSession();
           if (!data.session) {
             throw new Error("重置链接中缺少有效的恢复凭据，请重新发送重置邮件");
           }
