@@ -11,7 +11,49 @@ import {
   restoreTransaction,
 } from "@/lib/transactions";
 import { getSupabase, hasSupabase } from "@/lib/supabase";
+
 let boot: Promise<{ user: User | null; supabase: boolean }> | null = null;
+const CACHE_PREFIX = "you-jile-ledger-cache-v1:";
+
+type LedgerCache = {
+  rows: Transaction[];
+  rules: CategoryRule[];
+  savedAt: number;
+};
+
+function cacheKey(userId: string) {
+  return `${CACHE_PREFIX}${userId}`;
+}
+
+function readCache(userId: string): LedgerCache | null {
+  try {
+    const raw = window.localStorage.getItem(cacheKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LedgerCache;
+    if (!Array.isArray(parsed.rows) || !Array.isArray(parsed.rules)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(userId: string, rows: Transaction[], rules: CategoryRule[]) {
+  try {
+    const payload: LedgerCache = { rows, rules, savedAt: Date.now() };
+    window.localStorage.setItem(cacheKey(userId), JSON.stringify(payload));
+  } catch {
+    // Cache is a speed optimization only; quota/privacy settings must never block bookkeeping.
+  }
+}
+
+function clearCache(userId?: string) {
+  try {
+    if (userId) window.localStorage.removeItem(cacheKey(userId));
+  } catch {
+    // Ignore browser storage failures during logout.
+  }
+}
+
 function bootstrap() {
   if (!boot)
     boot = (async () => {
@@ -34,6 +76,7 @@ function bootstrap() {
     });
   return boot;
 }
+
 export function useLedger() {
   const [user, setUser] = useState<User | null>(null);
   const [rows, setRows] = useState<Transaction[]>([]);
@@ -46,6 +89,7 @@ export function useLedger() {
   const lock = useRef(false);
   const version = useRef(0);
   const deletionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const refresh = useCallback(async () => {
     const v = ++version.current;
     const data = await getTransactions();
@@ -55,13 +99,33 @@ export function useLedger() {
       setError("");
     }
   }, []);
+
   const refreshUser = useCallback(async () => {
     const result = await getUser();
     if (result.user) setUser(result.user);
     return result.user;
   }, []);
+
   useEffect(() => {
     let active = true;
+
+    // Supabase keeps the current session locally. Use its user id to restore the
+    // last confirmed ledger immediately, while fresh cloud data loads behind it.
+    if (hasSupabase) {
+      void getSupabase()
+        ?.auth.getSession()
+        .then(({ data }) => {
+          if (!active) return;
+          const userId = data.session?.user.id;
+          if (!userId) return;
+          const cached = readCache(userId);
+          if (!cached) return;
+          setRows(cached.rows);
+          setRules(cached.rules);
+          setLoading(false);
+        });
+    }
+
     bootstrap()
       .then(async (result) => {
         if (!active) return;
@@ -78,17 +142,25 @@ export function useLedger() {
       .finally(() => {
         if (active) setLoading(false);
       });
+
     return () => {
       active = false;
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (!user?.id || loading) return;
+    writeCache(user.id, rows, rules);
+  }, [user?.id, rows, rules, loading]);
+
   useEffect(() => {
     if (!user) return;
     const sync = () => {
       if (document.visibilityState === "visible")
         refresh().catch((e) => setError(e.message));
     };
-    const interval = setInterval(sync, 15000);
+    // Realtime handles normal changes. A slower poll is only a safety net.
+    const interval = setInterval(sync, 60000);
     window.addEventListener("focus", sync);
     window.addEventListener("online", sync);
     const client = getSupabase();
@@ -122,11 +194,13 @@ export function useLedger() {
       if (channel) void client?.removeChannel(channel);
     };
   }, [user, refresh]);
+
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 4200);
     return () => clearTimeout(timer);
   }, [toast]);
+
   const save = async (draft: Draft, id?: string): Promise<{ ok: boolean; error?: string }> => {
     if (lock.current) return { ok: false, error: "正在保存上一笔账，请稍候" };
     lock.current = true;
@@ -148,7 +222,9 @@ export function useLedger() {
           ? "账单已更新，分类偏好会在下次记账时生效"
           : `${draft.type === "expense" ? "又寄了" : "到账了"} ¥${draft.amount} ${draft.emoji}`,
       );
-      await refresh().catch(() => setError("账单已保存，刷新暂时失败，请重试"));
+      // The insert/update response is already authoritative. Do not keep the UI
+      // blocked for another full ledger download; reconcile quietly afterwards.
+      void refresh().catch(() => setError("账单已保存，后台同步暂时失败，可稍后重试"));
       return { ok: true };
     } catch (e) {
       const message = e instanceof Error ? e.message : "保存失败";
@@ -159,6 +235,7 @@ export function useLedger() {
       setBusy(false);
     }
   };
+
   const saveMany = async (drafts: Draft[]): Promise<{ ok: boolean; saved: number; error?: string }> => {
     if (!drafts.length) return { ok: true, saved: 0 };
     if (lock.current) return { ok: false, saved: 0, error: "正在保存上一笔账，请稍候" };
@@ -183,14 +260,14 @@ export function useLedger() {
       }
       mergeSavedRows();
       setToast(`已补记 ${savedRows.length} 笔账`);
-      await refresh().catch(() => setError("账单已保存，刷新暂时失败，请重试"));
+      void refresh().catch(() => setError("账单已保存，后台同步暂时失败，可稍后重试"));
       return { ok: true, saved: savedRows.length };
     } catch (e) {
       mergeSavedRows();
       const message = e instanceof Error ? e.message : "批量保存失败";
       if (savedRows.length) {
         setToast(`已保存 ${savedRows.length} 笔，后续保存中断`);
-        await refresh().catch(() => {});
+        void refresh().catch(() => {});
       } else {
         setToast(message);
       }
@@ -200,6 +277,7 @@ export function useLedger() {
       setBusy(false);
     }
   };
+
   const remove = async (row: Transaction) => {
     if (lock.current) return;
     lock.current = true;
@@ -218,6 +296,7 @@ export function useLedger() {
       setBusy(false);
     }
   };
+
   const undo = async () => {
     if (!lastDeleted || lock.current) return;
     lock.current = true;
@@ -235,6 +314,7 @@ export function useLedger() {
       setBusy(false);
     }
   };
+
   const logout = async () => {
     try {
       if (hasSupabase) {
@@ -245,12 +325,14 @@ export function useLedger() {
           method: "POST",
           body: JSON.stringify({ action: "logout" }),
         });
+      clearCache(user?.id);
       boot = null;
       window.location.assign("/login");
     } catch {
       setToast("退出失败，请重试");
     }
   };
+
   return {
     user,
     rows,
