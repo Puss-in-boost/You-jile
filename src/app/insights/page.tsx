@@ -1,4 +1,5 @@
-import { LedgerApp } from "@/components/LedgerApp";
+import { InsightsApp } from "@/components/InsightsApp";
+
 export default function Page() {
-  return <LedgerApp view="insights" />;
+  return <InsightsApp />;
 }
