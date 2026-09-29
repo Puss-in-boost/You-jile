@@ -4243,3 +4243,170 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
   .yj-calendar-detail small { text-align: left; }
   .yj-report-balance { align-items: flex-start; flex-direction: column; gap: 6px; }
 }
+
+
+/* --------------------------------------------------------------------------
+   1.5 Analytics — recurring expenses, merchant frequency, anomalies
+   -------------------------------------------------------------------------- */
+.yj-pattern-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 12px;
+  align-items: baseline;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #f6f7f2;
+}
+.yj-pattern-summary > span { color: #8d8d87; font-size: 9px; }
+.yj-pattern-summary > strong { color: #2b2b27; font-size: 17px; }
+.yj-pattern-summary > small { grid-column: 1 / -1; color: #aaa9a3; font-size: 8px; }
+
+.yj-recurring-list,
+.yj-merchant-list,
+.yj-anomaly-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 13px;
+}
+.yj-recurring-row,
+.yj-merchant-row {
+  display: grid;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid #eeeeea;
+  border-radius: 14px;
+  background: #fff;
+}
+.yj-recurring-row {
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+}
+.yj-recurring-emoji,
+.yj-merchant-emoji {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: #f3f4ef;
+  font-size: 16px;
+}
+.yj-recurring-row > div:nth-child(2),
+.yj-merchant-copy { min-width: 0; }
+.yj-recurring-row > div:nth-child(2) strong,
+.yj-merchant-copy strong {
+  display: block;
+  overflow: hidden;
+  color: #3b3b36;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.yj-recurring-row > div:nth-child(2) small,
+.yj-merchant-copy small {
+  display: block;
+  margin-top: 4px;
+  color: #9d9d97;
+  font-size: 8px;
+  line-height: 1.45;
+}
+.yj-recurring-tail {
+  min-width: 74px;
+  text-align: right;
+}
+.yj-recurring-tail strong {
+  display: block;
+  color: #343430;
+  font-size: 10px;
+}
+.yj-recurring-tail span {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: 7px;
+}
+.yj-recurring-tail span.high { background: #e9f0e4; color: #517047; }
+.yj-recurring-tail span.medium { background: #f3efe3; color: #8a7346; }
+
+.yj-merchant-row {
+  grid-template-columns: 22px 34px minmax(0, 1fr) auto;
+}
+.yj-merchant-rank {
+  color: #b2b2ac;
+  font-size: 9px;
+  text-align: center;
+}
+.yj-merchant-total {
+  color: #33332f;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.yj-anomaly-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #f0e4dd;
+  border-radius: 14px;
+  background: #fff9f5;
+  color: inherit;
+  text-align: left;
+}
+.yj-anomaly-row > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: #f8eee8;
+  font-size: 16px;
+}
+.yj-anomaly-row > div { min-width: 0; }
+.yj-anomaly-row > div strong {
+  display: block;
+  overflow: hidden;
+  color: #493b35;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.yj-anomaly-row > div small {
+  display: block;
+  margin-top: 4px;
+  color: #a18679;
+  font-size: 8px;
+  line-height: 1.45;
+}
+.yj-anomaly-row > strong {
+  color: #9f5d49;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .yj-recurring-row {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+  .yj-recurring-tail {
+    grid-column: 2;
+    text-align: left;
+  }
+  .yj-merchant-row {
+    grid-template-columns: 18px 32px minmax(0, 1fr);
+  }
+  .yj-merchant-total {
+    grid-column: 3;
+  }
+  .yj-anomaly-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+  .yj-anomaly-row > strong {
+    grid-column: 2;
+  }
+}
