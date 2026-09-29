@@ -300,3 +300,252 @@ export function monthlyReport(rows: Transaction[], month: string): MonthlyReport
     zeroSpendDays: calendar.zeroSpendDays,
   };
 }
+
+
+function merchantKey(title: string) {
+  return title.normalize("NFKC").trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function median(values: number[]) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[middle]
+    : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
+}
+
+export type MerchantStat = {
+  title: string;
+  category: string;
+  subcategory: string;
+  emoji: string;
+  total: number;
+  count: number;
+  average: number;
+};
+
+export function merchantStats(
+  rows: Transaction[],
+  month: string,
+  limit = 8,
+): MerchantStat[] {
+  const map = new Map<string, MerchantStat>();
+  rows
+    .filter((row) => row.type === "expense" && row.date.startsWith(month))
+    .forEach((row) => {
+      const key = merchantKey(row.title);
+      if (!key) return;
+      const current = map.get(key);
+      if (current) {
+        current.total += cents(row.amount);
+        current.count += 1;
+        current.average = Math.round(current.total / current.count);
+      } else {
+        const pair = normalizeCategoryPair(row.category, row.subcategory);
+        map.set(key, {
+          title: row.title.trim() || "未命名",
+          category: pair.category,
+          subcategory: pair.subcategory,
+          emoji: row.emoji,
+          total: cents(row.amount),
+          count: 1,
+          average: cents(row.amount),
+        });
+      }
+    });
+
+  return [...map.values()]
+    .sort((a, b) => b.total - a.total || b.count - a.count)
+    .slice(0, limit);
+}
+
+export type RecurringExpense = {
+  title: string;
+  category: string;
+  subcategory: string;
+  emoji: string;
+  months: number;
+  occurrences: number;
+  averageMonthly: number;
+  latestAmount: number;
+  variation: number;
+  confidence: "high" | "medium";
+};
+
+export function recurringExpenses(
+  rows: Transaction[],
+  month: string,
+  lookback = 6,
+): RecurringExpense[] {
+  const months = Array.from({ length: lookback }, (_, index) =>
+    shiftMonth(month, index - lookback + 1),
+  );
+  const monthSet = new Set(months);
+  const groups = new Map<
+    string,
+    {
+      title: string;
+      category: string;
+      subcategory: string;
+      emoji: string;
+      occurrences: number;
+      byMonth: Map<string, number>;
+    }
+  >();
+
+  rows
+    .filter(
+      (row) =>
+        row.type === "expense" &&
+        monthSet.has(row.date.slice(0, 7)),
+    )
+    .forEach((row) => {
+      const pair = normalizeCategoryPair(row.category, row.subcategory);
+      const key = `${merchantKey(row.title)}::${pair.category}::${pair.subcategory}`;
+      const current = groups.get(key) ?? {
+        title: row.title.trim() || "未命名",
+        category: pair.category,
+        subcategory: pair.subcategory,
+        emoji: row.emoji,
+        occurrences: 0,
+        byMonth: new Map<string, number>(),
+      };
+      const rowMonth = row.date.slice(0, 7);
+      current.occurrences += 1;
+      current.byMonth.set(
+        rowMonth,
+        (current.byMonth.get(rowMonth) ?? 0) + cents(row.amount),
+      );
+      groups.set(key, current);
+    });
+
+  const fixedHousing = new Set([
+    "房租房贷",
+    "通信网络",
+    "物业管理",
+    "保险保障",
+    "水电燃气",
+  ]);
+
+  return [...groups.values()]
+    .map((item) => {
+      const values = [...item.byMonth.values()];
+      const monthsPresent = values.length;
+      const averageMonthly = Math.round(
+        values.reduce((sum, value) => sum + value, 0) / Math.max(1, monthsPresent),
+      );
+      const spread = values.length
+        ? Math.max(...values) - Math.min(...values)
+        : 0;
+      const variation = averageMonthly ? spread / averageMonthly : 0;
+      const structural =
+        item.category === "订阅服务" ||
+        (item.category === "居住" && fixedHousing.has(item.subcategory));
+      const stable = variation <= 0.25;
+      const latestAmount = item.byMonth.get(month) ?? values[values.length - 1] ?? 0;
+
+      if (monthsPresent < 2 || (!structural && !stable)) return null;
+
+      return {
+        title: item.title,
+        category: item.category,
+        subcategory: item.subcategory,
+        emoji: item.emoji,
+        months: monthsPresent,
+        occurrences: item.occurrences,
+        averageMonthly,
+        latestAmount,
+        variation,
+        confidence:
+          monthsPresent >= 3 && (structural || variation <= 0.15)
+            ? ("high" as const)
+            : ("medium" as const),
+      };
+    })
+    .filter((item): item is RecurringExpense => item !== null)
+    .sort(
+      (a, b) =>
+        (a.confidence === b.confidence ? 0 : a.confidence === "high" ? -1 : 1) ||
+        b.averageMonthly - a.averageMonthly,
+    );
+}
+
+export type SpendingAnomaly = {
+  id: string;
+  title: string;
+  date: string;
+  emoji: string;
+  category: string;
+  subcategory: string;
+  amount: number;
+  typical: number;
+  ratio: number;
+  baselineCount: number;
+};
+
+export function spendingAnomalies(
+  rows: Transaction[],
+  month: string,
+  lookback = 6,
+): SpendingAnomaly[] {
+  const historyMonths = new Set(
+    Array.from({ length: lookback }, (_, index) =>
+      shiftMonth(month, index - lookback),
+    ),
+  );
+  const historical = rows.filter(
+    (row) =>
+      row.type === "expense" &&
+      historyMonths.has(row.date.slice(0, 7)),
+  );
+  const current = rows.filter(
+    (row) => row.type === "expense" && row.date.startsWith(month),
+  );
+
+  return current
+    .map((row) => {
+      const pair = normalizeCategoryPair(row.category, row.subcategory);
+      const sameSub = historical.filter((item) => {
+        const candidate = normalizeCategoryPair(item.category, item.subcategory);
+        return (
+          candidate.category === pair.category &&
+          candidate.subcategory === pair.subcategory
+        );
+      });
+      const sameCategory = historical.filter((item) => {
+        const candidate = normalizeCategoryPair(item.category, item.subcategory);
+        return candidate.category === pair.category;
+      });
+      const baseline = sameSub.length >= 4 ? sameSub : sameCategory;
+      if (baseline.length < 6 && sameSub.length < 4) return null;
+
+      const values = baseline.map((item) => cents(item.amount)).filter((value) => value > 0);
+      const typical = median(values);
+      if (!typical) return null;
+      const amount = cents(row.amount);
+      const ratio = amount / typical;
+
+      // A personalized threshold: require the transaction to be both much larger
+      // than the category's own median and above the upper quartile of its history.
+      const sorted = [...values].sort((a, b) => a - b);
+      const q75 = sorted[Math.floor((sorted.length - 1) * 0.75)] ?? typical;
+      if (ratio < 2.2 || amount <= q75) return null;
+
+      return {
+        id: row.id,
+        title: row.title,
+        date: row.date,
+        emoji: row.emoji,
+        category: pair.category,
+        subcategory: pair.subcategory,
+        amount,
+        typical,
+        ratio,
+        baselineCount: values.length,
+      };
+    })
+    .filter((item): item is SpendingAnomaly => item !== null)
+    .sort((a, b) => b.ratio - a.ratio || b.amount - a.amount)
+    .slice(0, 5);
+}
