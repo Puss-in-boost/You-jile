@@ -19,8 +19,11 @@ import {
   categoryChanges,
   compareToPreviousMonth,
   discover,
+  merchantStats,
   monthlyReport,
   monthlyTrend,
+  recurringExpenses,
+  spendingAnomalies,
   spendingCalendar,
   summarize,
 } from "@/lib/stats";
@@ -310,6 +313,13 @@ export function InsightsApp() {
   const changes = categoryChanges(ledger.rows, month);
   const calendar = spendingCalendar(ledger.rows, month);
   const report = monthlyReport(ledger.rows, month);
+  const recurring = recurringExpenses(ledger.rows, month, 6);
+  const merchants = merchantStats(ledger.rows, month, 8);
+  const anomalies = spendingAnomalies(ledger.rows, month, 6);
+  const recurringMonthlyTotal = recurring.reduce(
+    (sum, item) => sum + item.averageMonthly,
+    0,
+  );
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(null);
   const selectedDay = selectedCalendarDay
     ? calendar.days.find((item) => item.day === selectedCalendarDay) ?? null
@@ -599,6 +609,99 @@ export function InsightsApp() {
               结余 {report.balance >= 0 ? "+" : "−"}¥{money(Math.abs(report.balance))}
             </strong>
           </div>
+        </section>
+
+        <section className="yj-card yj-insight-card">
+          <div className="yj-card-title">
+            <div><strong>疑似固定支出</strong><small>根据近 6 个月重复出现的项目和金额稳定性识别</small></div>
+          </div>
+          {recurring.length ? (
+            <>
+              <div className="yj-pattern-summary">
+                <span>估算每月固定支出</span>
+                <strong>¥{money(recurringMonthlyTotal)}</strong>
+                <small>{recurring.length} 个候选 · 仅根据已记录流水推断</small>
+              </div>
+              <div className="yj-recurring-list">
+                {recurring.slice(0, 6).map((item) => (
+                  <div className="yj-recurring-row" key={`${item.title}-${item.category}-${item.subcategory}`}>
+                    <span className="yj-recurring-emoji">{item.emoji}</span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <small>
+                        {item.category}{item.subcategory ? ` / ${item.subcategory}` : ""} ·
+                        近 6 月出现 {item.months} 个月
+                      </small>
+                    </div>
+                    <div className="yj-recurring-tail">
+                      <strong>¥{money(item.averageMonthly)}/月</strong>
+                      <span className={item.confidence === "high" ? "high" : "medium"}>
+                        {item.confidence === "high" ? "较稳定" : "可能固定"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="yj-empty"><span>🔁</span><p>暂时没有足够稳定的重复支出。连续记录两三个月后会更准。</p></div>
+          )}
+        </section>
+
+        <section className="yj-card yj-insight-card">
+          <div className="yj-card-title">
+            <div><strong>常去哪里花钱</strong><small>按账单标题汇总金额、次数和单次均价</small></div>
+          </div>
+          {merchants.length ? (
+            <div className="yj-merchant-list">
+              {merchants.map((item, index) => (
+                <div className="yj-merchant-row" key={`${item.title}-${index}`}>
+                  <span className="yj-merchant-rank">{index + 1}</span>
+                  <span className="yj-merchant-emoji">{item.emoji}</span>
+                  <div className="yj-merchant-copy">
+                    <strong>{item.title}</strong>
+                    <small>{item.count} 次 · 单次均价 ¥{money(item.average)}</small>
+                  </div>
+                  <strong className="yj-merchant-total">¥{money(item.total)}</strong>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="yj-empty"><span>🧾</span><p>这个月还没有足够的消费记录。</p></div>
+          )}
+        </section>
+
+        <section className="yj-card yj-insight-card">
+          <div className="yj-card-title">
+            <div><strong>异常消费</strong><small>和你自己过去 6 个月的同类消费相比，不使用固定金额阈值</small></div>
+          </div>
+          {anomalies.length ? (
+            <div className="yj-anomaly-list">
+              {anomalies.map((item) => {
+                const row = ledger.rows.find((candidate) => candidate.id === item.id);
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    className="yj-anomaly-row"
+                    onClick={() => row && openEdit(row)}
+                  >
+                    <span>{item.emoji}</span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <small>
+                        {item.date} · 平时约 ¥{money(item.typical)} ·
+                        本次约为 {item.ratio.toFixed(1)} 倍
+                      </small>
+                    </div>
+                    <strong>¥{money(item.amount)}</strong>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="yj-empty"><span>✓</span><p>暂未发现明显异常，或同类历史数据还不足以形成可靠基线。</p></div>
+          )}
         </section>
 
         <section className="yj-discovery yj-discovery-light">
