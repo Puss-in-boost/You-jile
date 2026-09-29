@@ -6,8 +6,11 @@ import {
   categoryChanges,
   compareToPreviousMonth,
   dailyExpenseSeries,
+  merchantStats,
   monthlyReport,
   monthlyTrend,
+  recurringExpenses,
+  spendingAnomalies,
   spendingCalendar,
   summarize,
 } from "../src/lib/stats";
@@ -256,7 +259,7 @@ test("personal rules still override the expanded dictionary", () => {
     now,
   );
   assert.equal(r.category, "购物");
-  assert.equal(r.subcategory, "日用百货");
+  assert.equal(r.subcategory, "日用家居");
   assert.equal(r.matchSource, "user_rule");
 });
 
@@ -526,4 +529,122 @@ test("monthly report summarizes the biggest category and movement", () => {
   assert.equal(report.topIncrease?.category, "居住");
   assert.equal(report.topDecrease?.category, "交通");
   assert.equal(report.highestDay?.day, 5);
+});
+
+
+test("merchant stats rank by total and preserve frequency", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (id: string, title: string, amount: string, date: string): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    title,
+    amount,
+    date,
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows = [
+    row("1", "瑞幸", "18.00", "2026-05-01"),
+    row("2", "瑞幸", "22.00", "2026-05-03"),
+    row("3", "盒马", "80.00", "2026-05-04"),
+  ];
+  const stats = merchantStats(rows, "2026-05");
+  assert.equal(stats[0].title, "盒马");
+  const luckin = stats.find((item) => item.title === "瑞幸");
+  assert.equal(luckin?.count, 2);
+  assert.equal(luckin?.total, 4000);
+  assert.equal(luckin?.average, 2000);
+});
+
+test("recurring expenses favor structural or stable cross-month spending", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (
+    id: string,
+    title: string,
+    amount: string,
+    date: string,
+    category: string,
+    subcategory: string,
+  ): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    title,
+    amount,
+    date,
+    category,
+    subcategory,
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows = [
+    row("1", "ChatGPT", "140.00", "2026-03-08", "订阅服务", "数字工具"),
+    row("2", "ChatGPT", "140.00", "2026-04-08", "订阅服务", "数字工具"),
+    row("3", "ChatGPT", "140.00", "2026-05-08", "订阅服务", "数字工具"),
+    row("4", "房租", "1200.00", "2026-04-01", "居住", "房租房贷"),
+    row("5", "房租", "1200.00", "2026-05-01", "居住", "房租房贷"),
+    row("6", "瑞幸", "18.00", "2026-04-02", "餐饮", "饮料"),
+    row("7", "瑞幸", "39.00", "2026-05-02", "餐饮", "饮料"),
+  ];
+  const recurring = recurringExpenses(rows, "2026-05", 3);
+  assert.ok(recurring.some((item) => item.title === "ChatGPT"));
+  assert.ok(recurring.some((item) => item.title === "房租"));
+  assert.equal(recurring.some((item) => item.title === "瑞幸"), false);
+  assert.equal(recurring.find((item) => item.title === "ChatGPT")?.confidence, "high");
+});
+
+test("anomaly detection compares against the user's own category history", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (id: string, amount: string, date: string): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    title: id === "big" ? "聚餐" : "午饭",
+    amount,
+    date,
+    category: "餐饮",
+    subcategory: "正餐",
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows = [
+    row("1", "20.00", "2026-01-03"),
+    row("2", "22.00", "2026-01-12"),
+    row("3", "25.00", "2026-02-03"),
+    row("4", "18.00", "2026-02-12"),
+    row("5", "24.00", "2026-03-03"),
+    row("6", "21.00", "2026-04-03"),
+    row("big", "168.00", "2026-05-06"),
+  ];
+  const anomalies = spendingAnomalies(rows, "2026-05", 4);
+  assert.equal(anomalies.length, 1);
+  assert.equal(anomalies[0].id, "big");
+  assert.equal(anomalies[0].amount, 16800);
+  assert.ok(anomalies[0].ratio > 6);
+});
+
+test("anomaly detection stays quiet without enough history", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const rows = [
+    {
+      ...base,
+      id: "1",
+      userId: "u1",
+      amount: "20.00",
+      date: "2026-04-01",
+      createdAt: "2026-04-01T08:00:00.000Z",
+      updatedAt: "2026-04-01T08:00:00.000Z",
+    },
+    {
+      ...base,
+      id: "2",
+      userId: "u1",
+      amount: "200.00",
+      date: "2026-05-01",
+      createdAt: "2026-05-01T08:00:00.000Z",
+      updatedAt: "2026-05-01T08:00:00.000Z",
+    },
+  ] as Transaction[];
+  assert.equal(spendingAnomalies(rows, "2026-05").length, 0);
 });
