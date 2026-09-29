@@ -88,7 +88,7 @@ export function InsightsApp() {
   const calendar = spendingCalendar(ledger.rows, month);
   const report = monthlyReport(ledger.rows, month);
   const recurring = recurringExpenses(ledger.rows, month, 6);
-  const merchants = merchantStats(ledger.rows, month, 8);
+  const merchants = merchantStats(ledger.rows, month, 6);
   const anomalies = spendingAnomalies(ledger.rows, month, 6);
   const recurringTotal = recurring.reduce(
     (sum, item) => sum + item.averageMonthly,
