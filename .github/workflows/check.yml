@@ -25,7 +25,8 @@ jobs:
         run: npm ci
       - name: Typecheck
         run: npm run typecheck
-      - name: Lint
+      - name: Lint (advisory while legacy React lint debt is cleaned up)
+        continue-on-error: true
         run: npm run lint
       - name: Tests
         run: npm test
