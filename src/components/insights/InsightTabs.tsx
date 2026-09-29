@@ -79,7 +79,11 @@ function walletQuip({
     return `${merchants[0].title} 本月和你碰面 ${merchants[0].count} 次，熟客进度条正在悄悄前进。`;
   }
   if (recurringTotal > expense * 0.3) {
-    return `这个月还没开始自由发挥，固定支出已经先切走了约 ${Math.round((recurringTotal / expense) * 100)}% 的蛋糕。`;
+    const recurringShare = Math.min(
+      100,
+      Math.round((recurringTotal / expense) * 100),
+    );
+    return `这个月还没开始自由发挥，固定支出已经先切走了约 ${recurringShare}% 的蛋糕。`;
   }
   if (monthPercent != null && monthPercent <= -15) {
     return `这个月钱包踩了点刹车，比上月少花 ${Math.abs(monthPercent)}%。刹得不算急，但确实看得见。`;
@@ -320,6 +324,16 @@ export function TrendsTab({
     trendMax,
   );
   const mix = categoryTrend(rows, month, 6, 4);
+  const [selectedTrendIndex, setSelectedTrendIndex] = useState(
+    Math.max(0, trend.length - 1),
+  );
+
+  useEffect(() => {
+    setSelectedTrendIndex(Math.max(0, trend.length - 1));
+  }, [month, trend.length]);
+
+  const selectedTrend =
+    trend[selectedTrendIndex] ?? trend[trend.length - 1] ?? null;
 
   return (
     <div className="yj-insight-tab-panel" role="tabpanel">
@@ -355,9 +369,37 @@ export function TrendsTab({
                 })}
               </svg>
               <div className="yj-trend-labels">
-                {trend.map((item) => <span key={item.month}>{monthLabel(item.month)}</span>)}
+                {trend.map((item, index) => (
+                  <button
+                    type="button"
+                    key={item.month}
+                    className={selectedTrendIndex === index ? "active" : ""}
+                    onClick={() => setSelectedTrendIndex(index)}
+                    aria-label={`查看 ${item.month} 数据`}
+                  >
+                    {monthLabel(item.month)}
+                  </button>
+                ))}
               </div>
             </div>
+            {selectedTrend && (
+              <div className="yj-trend-inspector">
+                <div>
+                  <span>{selectedTrend.month}</span>
+                  <strong>支出 ¥{money(selectedTrend.expense)}</strong>
+                </div>
+                <div>
+                  <span>已记录收入</span>
+                  <strong>¥{money(selectedTrend.income)}</strong>
+                </div>
+                <div>
+                  <span>结余</span>
+                  <strong className={selectedTrend.balance < 0 ? "negative" : "positive"}>
+                    {selectedTrend.balance < 0 ? "−" : ""}¥{money(Math.abs(selectedTrend.balance))}
+                  </strong>
+                </div>
+              </div>
+            )}
             <div className="yj-trend-summary">
               <span>6个月月均支出</span>
               <strong>
