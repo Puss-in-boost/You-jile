@@ -1228,7 +1228,6 @@ export const categories: CategoryDefinition[] = [
       "进账",
       "到账",
       "入账",
-      "收到",
       "收款"
     ],
     "aliases": [
