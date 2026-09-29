@@ -54,6 +54,8 @@ function currentDateLabel() {
 }
 
 function classificationReason(draft: ParsedDraft) {
+  if (draft.type === "income" && draft.matchSource === "fallback")
+    return "识别到收入语义";
   const keyword = draft.matchedKeyword ? `「${draft.matchedKeyword}」` : "";
   switch (draft.matchSource) {
     case "user_rule":
