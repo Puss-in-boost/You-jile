@@ -549,3 +549,59 @@ export function spendingAnomalies(
     .sort((a, b) => b.ratio - a.ratio || b.amount - a.amount)
     .slice(0, 5);
 }
+
+
+export type CategoryTrendPoint = {
+  month: string;
+  total: number;
+  categories: Record<string, number>;
+};
+
+export function categoryTrend(
+  rows: Transaction[],
+  month: string,
+  count = 6,
+  categoryLimit = 4,
+): {
+  categories: Array<{ name: string; emoji: string }>;
+  points: CategoryTrendPoint[];
+} {
+  const months = Array.from({ length: count }, (_, index) =>
+    shiftMonth(month, index - count + 1),
+  );
+  const summaries = months.map((target) => ({
+    month: target,
+    summary: summarize(rows, target),
+  }));
+  const totals = new Map<string, number>();
+
+  for (const { summary } of summaries) {
+    for (const group of summary.groups) {
+      totals.set(group.name, (totals.get(group.name) ?? 0) + group.total);
+    }
+  }
+
+  const categoryNames = [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, categoryLimit)
+    .map(([name]) => name);
+
+  return {
+    categories: categoryNames.map((name) => ({
+      name,
+      emoji: getCategory(name).emoji,
+    })),
+    points: summaries.map(({ month: target, summary }) => {
+      const categoriesForMonth: Record<string, number> = {};
+      for (const name of categoryNames) {
+        categoriesForMonth[name] =
+          summary.groups.find((group) => group.name === name)?.total ?? 0;
+      }
+      return {
+        month: target,
+        total: summary.expense,
+        categories: categoriesForMonth,
+      };
+    }),
+  };
+}
