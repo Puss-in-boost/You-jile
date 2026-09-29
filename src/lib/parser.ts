@@ -85,6 +85,40 @@ function removeSlice(text: string, start: number, end: number) {
   return `${text.slice(0, start)} ${text.slice(end)}`;
 }
 
+function incomeIntent(title: string) {
+  const normalized = title.normalize("NFKC").toLowerCase();
+
+  // Explicit outgoing language wins over ambiguous words such as 红包/转账.
+  if (
+    /发红包|红包支出|转账给|转给|给.{0,8}转账|付款|付给|支付|支出|随礼|送礼|捐款|买入/.test(
+      normalized,
+    )
+  )
+    return false;
+
+  return /收入|进账|到账|入账|收款|收到|收了|收红包|收到红包|工资|薪水|薪资|奖金|年终奖|绩效|补贴|津贴|补助|奖学金|助学金|报销|退款|返现|退押金|押金退回|退税|利息|分红|股息|理财收益|投资收益|兼职|副业|稿费|外快|项目款|项目费|咨询费|佣金|提成|劳务收入|闲鱼卖出|二手卖出|二手回血|卖出所得|卖了|卖出|卖掉|出售|回血|转入|转我|转给我|给我转|salary|bonus|refund|dividend|interest|reimbursement|commission/i.test(
+    normalized,
+  );
+}
+
+function incomeSubcategory(title: string) {
+  const normalized = title.normalize("NFKC").toLowerCase();
+
+  if (/工资|薪水|薪资|发工资|实习工资|实习费|劳务费|补发工资|salary|payroll/i.test(normalized))
+    return "工资薪酬";
+  if (/奖金|年终奖|绩效|补贴|津贴|补助|奖学金|助学金|bonus|scholarship/i.test(normalized))
+    return "奖金补贴";
+  if (/报销|退款|返现|退押金|押金退回|退税|refund|reimbursement/i.test(normalized))
+    return "报销退款";
+  if (/兼职|副业|稿费|外快|项目款|项目费|咨询费|佣金|提成|劳务收入|freelance|commission/i.test(normalized))
+    return "兼职副业";
+  if (/利息|分红|股息|理财收益|投资收益|基金分红|存款利息|dividend|interest/i.test(normalized))
+    return "理财收益";
+  if (/收红包|收到红包|转入|收款|收到|到账|入账|闲鱼卖出|二手卖出|二手回血|卖出所得|卖了|卖出|卖掉|出售|回血|转我|转给我|给我转|transfer in|sale income/i.test(normalized))
+    return "转入所得";
+  return "";
+}
+
 export function parseEntry(
   input: string,
   rules: CategoryRule[] = [],
@@ -140,14 +174,12 @@ export function parseEntry(
       .trim() || "日常记账";
 
   const match = matchCategory(title, rules);
-  const incomeByWords =
-    /工资|薪水|薪资|奖金|收入|报销|退款|返现|利息|分红|股息|兼职|副业|稿费|外快|红包|收款|转入|salary|bonus|refund|dividend|interest/i.test(
-      title,
-    );
-  const type = incomeByWords || match.category === "收入" ? "income" : "expense";
-  const category = type === "income" ? "收入" : match.category;
-  const subcategory =
-    type === "income" && match.category !== "收入" ? "" : match.subcategory;
+  const isIncome = incomeIntent(title) || match.category === "收入";
+  const type = isIncome ? "income" : "expense";
+  const category = isIncome ? "收入" : match.category;
+  const subcategory = isIncome
+    ? (match.category === "收入" ? match.subcategory : "") || incomeSubcategory(title)
+    : match.subcategory;
 
   return {
     type,
