@@ -85,6 +85,18 @@ function removeSlice(text: string, start: number, end: number) {
   return `${text.slice(0, start)} ${text.slice(end)}`;
 }
 
+function detectTransactionType(title: string, matchedCategory: string): "income" | "expense" {
+  const explicitExpense =
+    /发红包|红包支出|随礼|转账给|转给(?!我)|转出|付款给|支出|缴费|充值|还款/i;
+  if (explicitExpense.test(title)) return "expense";
+
+  const explicitIncome =
+    /工资|薪水|薪资|薪酬|奖金|补贴|补助|津贴|绩效|年终奖|奖学金|助学金|收入|报销|退款|返现|退押金|押金退回|退税|利息|分红|股息|理财收益|投资收益|兼职|副业|稿费|外快|项目款|项目费|提成|佣金|劳务费|咨询费|收红包|收到红包|收到|收款|到账|入账|进账|转入|转我|转给我|回血|二手回血|闲鱼卖出|闲鱼收入|二手卖出|二手出售|^(?:卖|卖掉|卖了|卖出)/i;
+  if (explicitIncome.test(title) || matchedCategory === "收入") return "income";
+
+  return "expense";
+}
+
 export function parseEntry(
   input: string,
   rules: CategoryRule[] = [],
@@ -140,14 +152,10 @@ export function parseEntry(
       .trim() || "日常记账";
 
   const match = matchCategory(title, rules);
-  const incomeByWords =
-    /工资|薪水|薪资|奖金|收入|报销|退款|返现|利息|分红|股息|兼职|副业|稿费|外快|红包|收款|转入|salary|bonus|refund|dividend|interest/i.test(
-      title,
-    );
-  const type = incomeByWords || match.category === "收入" ? "income" : "expense";
+  const type = detectTransactionType(title, match.category);
   const category = type === "income" ? "收入" : match.category;
   const subcategory =
-    type === "income" && match.category !== "收入" ? "" : match.subcategory;
+    type === "income" && match.category !== "收入" ? "转入所得" : match.subcategory;
 
   return {
     type,
