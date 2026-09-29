@@ -313,12 +313,29 @@ export function spendingArchaeology(
     label = `${months} 个月前的今天`;
   }
 
+  const sameTitle = expenseRows(rows)
+    .filter(
+      (row) =>
+        row.title.normalize("NFKC").trim().toLowerCase() ===
+        candidate.title.normalize("NFKC").trim().toLowerCase(),
+    )
+    .sort(
+      (a, b) =>
+        a.date.localeCompare(b.date) ||
+        a.createdAt.localeCompare(b.createdAt),
+    );
+  const firstSame = sameTitle[0];
+  const titleMemory =
+    sameTitle.length >= 2
+      ? `「${candidate.title}」在账本里一共出现过 ${sameTitle.length} 次，第一次是 ${firstSame.date}。`
+      : `那天它被记进了「${candidate.category}${candidate.subcategory ? ` / ${candidate.subcategory}` : ""}」。`;
+
   return {
     found: true,
     emoji: "🏺",
     label,
     title: `${candidate.emoji} ${candidate.title} · ¥${Number(candidate.amount).toFixed(2)}`,
-    detail: `那天它被记进了「${candidate.category}${candidate.subcategory ? ` / ${candidate.subcategory}` : ""}」。账单不会说话，但很会留证据。`,
+    detail: `${titleMemory} 账单不会说话，但很会留证据。`,
     transactionId: candidate.id,
   };
 }
