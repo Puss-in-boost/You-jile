@@ -73,7 +73,19 @@ function builtInCandidates(): Candidate[] {
       }
     }
   }
-  return list.sort((a, b) => b.word.length - a.word.length);
+  return list.sort((a, b) => {
+    const aMarketplaceChannel =
+      a.category === "购物" && a.subcategory === "其他购物";
+    const bMarketplaceChannel =
+      b.category === "购物" && b.subcategory === "其他购物";
+
+    // Marketplace names describe where something was bought, not what it was.
+    // When a concrete item/category keyword is also present, let the object win.
+    if (aMarketplaceChannel !== bMarketplaceChannel) {
+      return aMarketplaceChannel ? 1 : -1;
+    }
+    return b.word.length - a.word.length;
+  });
 }
 
 const candidates = builtInCandidates();
