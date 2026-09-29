@@ -4,6 +4,7 @@ import { parseEntry } from "../src/lib/parser";
 import { matchCategory } from "../src/lib/category-matcher";
 import {
   categoryChanges,
+  categoryTrend,
   compareToPreviousMonth,
   dailyExpenseSeries,
   merchantStats,
@@ -647,4 +648,38 @@ test("anomaly detection stays quiet without enough history", () => {
     },
   ] as Transaction[];
   assert.equal(spendingAnomalies(rows, "2026-05").length, 0);
+});
+
+
+test("category composition trend keeps monthly totals and dominant categories", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (
+    id: string,
+    amount: string,
+    date: string,
+    category: string,
+    subcategory: string,
+  ): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    amount,
+    date,
+    category,
+    subcategory,
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows = [
+    row("1", "300.00", "2026-04-03", "餐饮", "正餐"),
+    row("2", "100.00", "2026-04-04", "交通", "打车"),
+    row("3", "500.00", "2026-05-03", "餐饮", "正餐"),
+    row("4", "1200.00", "2026-05-05", "居住", "房租房贷"),
+  ];
+  const result = categoryTrend(rows, "2026-05", 2, 2);
+  assert.deepEqual(result.points.map((item) => item.month), ["2026-04", "2026-05"]);
+  assert.deepEqual(result.points.map((item) => item.total), [40000, 170000]);
+  assert.deepEqual(result.categories.map((item) => item.name), ["居住", "餐饮"]);
+  assert.equal(result.points[1].categories["居住"], 120000);
+  assert.equal(result.points[0].categories["餐饮"], 30000);
 });
