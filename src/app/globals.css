@@ -4639,3 +4639,223 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
   .yj-overview-structure { grid-template-columns: 1fr; }
   .yj-overview-signals { grid-template-columns: 1fr; }
 }
+
+
+/* --------------------------------------------------------------------------
+   1.6.1 Insights polish — denser mobile overview and calmer navigation
+   -------------------------------------------------------------------------- */
+.yj-insights-monthbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 330px;
+}
+.yj-insights-monthbar .yj-month-input {
+  flex: 1;
+  min-width: 0;
+}
+.yj-month-step,
+.yj-month-current {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid #e5e5df;
+  border-radius: 12px;
+  background: #fff;
+  color: #666660;
+}
+.yj-month-step {
+  width: 40px;
+  flex: 0 0 40px;
+  padding: 0;
+}
+.yj-month-current {
+  padding: 0 11px;
+  color: #62765a;
+  font-size: 9px;
+  font-weight: 600;
+}
+.yj-month-step:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.yj-insights-tabs {
+  position: sticky;
+  z-index: 18;
+  top: 8px;
+  backdrop-filter: blur(16px);
+  background: rgba(245,245,241,.92);
+}
+
+.yj-overview-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.yj-overview-stat-grid .yj-stat {
+  min-width: 0;
+  padding: 14px 13px;
+}
+.yj-overview-stat-grid .yj-stat span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.yj-overview-stat-grid .yj-stat strong {
+  overflow: hidden;
+  margin-top: 5px;
+  font-size: 17px;
+  letter-spacing: -.35px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.yj-overview-stat-grid .yj-stat strong.positive { color: #43825b; }
+.yj-overview-stat-grid .yj-stat strong.negative { color: #a65d4d; }
+
+.yj-wallet-voice {
+  padding: 12px 14px;
+}
+.yj-wallet-voice p {
+  margin-top: 5px;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.yj-report-pulse {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 15px;
+  background: #f5f6f1;
+}
+.yj-report-pulse > span {
+  color: #8f8f88;
+  font-size: 9px;
+}
+.yj-report-pulse > strong {
+  color: #44443f;
+  font-size: 14px;
+}
+.yj-report-pulse > strong.up { color: #a65d4d; }
+.yj-report-pulse > strong.down { color: #43825b; }
+.yj-report-pulse > small {
+  grid-column: 1 / -1;
+  color: #9c9c95;
+  font-size: 8px;
+}
+
+.yj-monthly-report .yj-report-list {
+  gap: 7px;
+  margin-top: 10px;
+}
+.yj-monthly-report .yj-report-list > div {
+  padding: 9px 10px;
+}
+.yj-monthly-report .yj-report-list p {
+  line-height: 1.5;
+}
+
+.yj-overview-structure,
+.yj-overview-signals {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.yj-overview-structure > button {
+  padding: 9px;
+}
+.yj-overview-signals > button {
+  padding: 12px;
+}
+
+.yj-insight-tab-panel > .yj-insight-card:first-child {
+  margin-top: 0;
+}
+.yj-insight-tab-panel .yj-insight-card {
+  scroll-margin-top: 72px;
+}
+
+.yj-trend-chart svg {
+  height: 136px;
+}
+.yj-composition-list {
+  gap: 8px;
+}
+.yj-composition-row > div {
+  height: 11px;
+}
+
+@media (max-width: 640px) {
+  .yj-insights-header {
+    gap: 12px;
+  }
+  .yj-insights-header > div:first-child p {
+    max-width: 34em;
+  }
+  .yj-insights-monthbar {
+    max-width: none;
+  }
+  .yj-insights-tabs {
+    top: 6px;
+    margin-left: -2px;
+    margin-right: -2px;
+  }
+}
+
+@media (max-width: 430px) {
+  .yj-overview-stat-grid {
+    gap: 6px;
+  }
+  .yj-overview-stat-grid .yj-stat {
+    padding: 12px 9px;
+  }
+  .yj-overview-stat-grid .yj-stat span {
+    font-size: 8px;
+  }
+  .yj-overview-stat-grid .yj-stat strong {
+    font-size: 14px;
+  }
+  .yj-overview-structure,
+  .yj-overview-signals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .yj-overview-structure > button {
+    grid-template-columns: 30px minmax(0, 1fr) 13px;
+    gap: 6px;
+    padding: 8px;
+  }
+  .yj-overview-structure > button > span {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+  .yj-overview-signals > button {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 6px;
+    padding: 10px;
+  }
+  .yj-overview-signals > button > svg {
+    width: 16px;
+    height: 16px;
+  }
+  .yj-month-current {
+    padding: 0 9px;
+  }
+}
+
+@media (max-width: 350px) {
+  .yj-overview-stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .yj-overview-stat-grid .yj-stat:last-child {
+    grid-column: 1 / -1;
+  }
+  .yj-overview-structure,
+  .yj-overview-signals {
+    grid-template-columns: 1fr;
+  }
+}
