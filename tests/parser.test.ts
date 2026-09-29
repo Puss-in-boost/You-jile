@@ -3,6 +3,11 @@ import assert from "node:assert/strict";
 import { parseEntry } from "../src/lib/parser";
 import { matchCategory } from "../src/lib/category-matcher";
 import {
+  jileIndex,
+  spendingArchaeology,
+  walletWeather,
+} from "../src/lib/personality";
+import {
   categoryChanges,
   categoryTrend,
   compareToPreviousMonth,
@@ -682,4 +687,128 @@ test("category composition trend keeps monthly totals and dominant categories", 
   assert.deepEqual(result.categories.map((item) => item.name), ["居住", "餐饮"]);
   assert.equal(result.points[1].categories["居住"], 120000);
   assert.equal(result.points[0].categories["餐饮"], 30000);
+});
+
+
+test("wallet weather compares today with the user's own recent daily baseline", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (id: string, amount: string, date: string): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    amount,
+    date,
+    category: "餐饮",
+    subcategory: "正餐",
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows: Transaction[] = [];
+  for (let day = 8; day <= 17; day += 1) {
+    rows.push(row(String(day), "20.00", `2026-05-${String(day).padStart(2, "0")}`));
+  }
+  rows.push(row("today", "60.00", "2026-05-18"));
+
+  const weather = walletWeather(rows, "2026-05-18");
+  assert.equal(weather.ready, true);
+  assert.equal(weather.baselineDaily, 2000);
+  assert.equal(weather.todayTotal, 6000);
+  assert.equal(weather.label, "钱包台风");
+  assert.equal(Math.round((weather.ratio ?? 0) * 10) / 10, 3);
+});
+
+test("Jile index stays entertainment-only and waits for enough history", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const sparse = [
+    {
+      ...base,
+      id: "old",
+      userId: "u1",
+      amount: "20.00",
+      date: "2026-05-17",
+      createdAt: "2026-05-17T08:00:00.000Z",
+      updatedAt: "2026-05-17T08:00:00.000Z",
+    },
+  ] as Transaction[];
+  assert.equal(jileIndex(sparse, "2026-05-18").score, null);
+
+  const rows: Transaction[] = [];
+  for (let day = 8; day <= 17; day += 1) {
+    rows.push({
+      ...base,
+      id: String(day),
+      userId: "u1",
+      amount: "20.00",
+      date: `2026-05-${String(day).padStart(2, "0")}`,
+      createdAt: `2026-05-${String(day).padStart(2, "0")}T08:00:00.000Z`,
+      updatedAt: `2026-05-${String(day).padStart(2, "0")}T08:00:00.000Z`,
+    });
+  }
+  rows.push({
+    ...base,
+    id: "today",
+    userId: "u1",
+    amount: "60.00",
+    date: "2026-05-18",
+    createdAt: "2026-05-18T08:00:00.000Z",
+    updatedAt: "2026-05-18T08:00:00.000Z",
+  });
+
+  const index = jileIndex(rows, "2026-05-18");
+  assert.equal(index.ready, true);
+  assert.ok((index.score ?? 0) >= 60);
+  assert.match(index.detail, /娱乐指数/);
+});
+
+test("spending archaeology prefers same day-of-month historical bills", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const rows = [
+    {
+      ...base,
+      id: "march",
+      userId: "u1",
+      title: "瑞幸",
+      amount: "19.00",
+      date: "2026-03-18",
+      category: "餐饮",
+      subcategory: "饮料",
+      emoji: "☕",
+      createdAt: "2026-03-18T08:00:00.000Z",
+      updatedAt: "2026-03-18T08:00:00.000Z",
+    },
+    {
+      ...base,
+      id: "april",
+      userId: "u1",
+      title: "午饭",
+      amount: "25.00",
+      date: "2026-04-10",
+      createdAt: "2026-04-10T08:00:00.000Z",
+      updatedAt: "2026-04-10T08:00:00.000Z",
+    },
+  ] as Transaction[];
+
+  const archaeology = spendingArchaeology(rows, "2026-05-18");
+  assert.equal(archaeology.found, true);
+  assert.equal(archaeology.transactionId, "march");
+  assert.equal(archaeology.label, "2 个月前的今天");
+  assert.match(archaeology.title, /瑞幸/);
+});
+
+test("spending archaeology does not fake nostalgia before history is old enough", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const rows = [
+    {
+      ...base,
+      id: "recent",
+      userId: "u1",
+      amount: "20.00",
+      date: "2026-05-10",
+      createdAt: "2026-05-10T08:00:00.000Z",
+      updatedAt: "2026-05-10T08:00:00.000Z",
+    },
+  ] as Transaction[];
+  const archaeology = spendingArchaeology(rows, "2026-05-18");
+  assert.equal(archaeology.found, false);
+  assert.match(archaeology.title, /还不够厚/);
 });
