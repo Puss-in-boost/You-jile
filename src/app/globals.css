@@ -5347,3 +5347,149 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
     width: 100%;
   }
 }
+
+
+/* --------------------------------------------------------------------------
+   1.8 Memory Museum — stories, milestones, classification provenance
+   -------------------------------------------------------------------------- */
+.yj-preview-wrap {
+  margin-top: 8px;
+}
+.yj-preview-wrap .yj-preview {
+  margin-top: 0;
+}
+.yj-classification-reason {
+  display: block;
+  margin: 5px 2px 0 22px;
+  color: #8c9487;
+  font-size: var(--yj-text-xs, 11px);
+  line-height: 1.45;
+}
+
+.yj-memory {
+  margin-top: 18px;
+}
+.yj-memory-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+.yj-memory-head span {
+  display: block;
+  color: #806d55;
+  font-size: var(--yj-text-xs, 11px);
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.yj-memory-head strong {
+  display: block;
+  margin-top: 3px;
+  color: #2f2e2a;
+  font-size: 14px;
+}
+
+.yj-memory-story {
+  padding: 16px;
+  border: 1px solid #e8e2d7;
+  border-radius: 18px;
+  background: linear-gradient(155deg, #fbf7ef 0%, #fffdf9 76%);
+}
+.yj-memory-story-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.yj-memory-story-title > span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 13px;
+  background: #f0e7d8;
+  font-size: 18px;
+}
+.yj-memory-story-title small,
+.yj-memory-milestones small {
+  display: block;
+  color: #a0907c;
+  font-size: var(--yj-text-xs, 11px);
+}
+.yj-memory-story-title strong {
+  display: block;
+  margin-top: 3px;
+  color: #43392e;
+  font-size: 14px;
+}
+.yj-memory-story-lines {
+  display: grid;
+  gap: 7px;
+  margin-top: 13px;
+}
+.yj-memory-story-lines p {
+  color: #706354;
+  font-size: var(--yj-text-sm, 12px);
+  line-height: 1.62;
+}
+
+.yj-memory-milestones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+.yj-memory-milestones article {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e9e8e2;
+  border-radius: 15px;
+  background: #fff;
+}
+.yj-memory-milestones article > span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  background: #f5f3ed;
+  font-size: 15px;
+}
+.yj-memory-milestones article > div {
+  min-width: 0;
+}
+.yj-memory-milestones strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: #3e3d38;
+  font-size: var(--yj-text-sm, 12px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.yj-memory-milestones p {
+  margin-top: 4px;
+  color: #929087;
+  font-size: var(--yj-text-xs, 11px);
+  line-height: 1.45;
+}
+
+.yj-memory-archaeology {
+  margin-top: 9px;
+}
+
+@media (max-width: 520px) {
+  .yj-memory-milestones {
+    grid-template-columns: 1fr;
+  }
+  .yj-memory-milestones article {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+  .yj-memory-milestones strong {
+    white-space: normal;
+  }
+}

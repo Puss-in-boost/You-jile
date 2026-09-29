@@ -8,6 +8,10 @@ import {
   walletWeather,
 } from "../src/lib/personality";
 import {
+  memoryMilestones,
+  monthlyStory,
+} from "../src/lib/memory";
+import {
   categoryChanges,
   categoryTrend,
   compareToPreviousMonth,
@@ -898,4 +902,121 @@ test("historical repair only flags text entries that disagree with current rules
   assert.equal(needsReclassification(stale, []), true);
   assert.equal(needsReclassification(manual, []), false);
   assert.equal(classifyTitle(stale.title, []).subcategory, "饮料");
+});
+
+
+test("memory museum monthly story is assembled from ledger facts", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (
+    id: string,
+    title: string,
+    amount: string,
+    date: string,
+    category: string,
+    subcategory: string,
+  ): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    title,
+    amount,
+    date,
+    category,
+    subcategory,
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows = [
+    row("p1", "午饭", "100.00", "2026-04-02", "餐饮", "正餐"),
+    row("1", "瑞幸", "20.00", "2026-05-02", "餐饮", "饮料"),
+    row("2", "瑞幸", "22.00", "2026-05-05", "餐饮", "饮料"),
+    row("3", "火锅", "168.00", "2026-05-08", "餐饮", "正餐"),
+    row("4", "地铁", "10.00", "2026-05-09", "交通", "公共交通"),
+  ];
+
+  const story = monthlyStory(rows, "2026-05");
+  assert.equal(story.ready, true);
+  assert.equal(story.title, "5 月剧情");
+  assert.ok(story.lines.some((line) => line.includes("餐饮")));
+  assert.ok(story.lines.some((line) => line.includes("瑞幸") && line.includes("2 次")));
+  assert.ok(story.lines.every((line) => !line.includes("undefined")));
+});
+
+test("memory milestones use real count, first bill, and familiar titles", () => {
+  const base = parseEntry("1 瑞幸", [], now) as Transaction;
+  const row = (id: string, amount: string, date: string): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    title: "瑞幸",
+    amount,
+    date,
+    category: "餐饮",
+    subcategory: "饮料",
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows = [
+    row("1", "18.00", "2026-01-03"),
+    row("2", "20.00", "2026-02-03"),
+    row("3", "22.00", "2026-03-03"),
+  ];
+
+  const milestones = memoryMilestones(rows, "2026-05-18");
+  assert.match(milestones[0].title, /3 笔/);
+  assert.equal(milestones[1].title, "瑞幸");
+  assert.ok(
+    milestones.some(
+      (item) => item.title.includes("瑞幸") && item.title.includes("3 次"),
+    ),
+  );
+});
+
+test("spending archaeology adds recurring-title context when available", () => {
+  const base = parseEntry("1 瑞幸", [], now) as Transaction;
+  const row = (id: string, date: string): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    title: "瑞幸",
+    amount: "19.00",
+    date,
+    category: "餐饮",
+    subcategory: "饮料",
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const archaeology = spendingArchaeology(
+    [
+      row("1", "2026-01-18"),
+      row("2", "2026-02-18"),
+      row("3", "2026-03-18"),
+    ],
+    "2026-05-18",
+  );
+  assert.equal(archaeology.found, true);
+  assert.match(archaeology.detail, /一共出现过 3 次/);
+  assert.match(archaeology.detail, /第一次是 2026-01-18/);
+});
+
+test("parser keeps classification provenance for explanation UI", () => {
+  const defaultMatch = parseEntry("18 瑞幸", [], now);
+  assert.equal(defaultMatch.matchSource, "exact");
+  assert.ok(defaultMatch.matchedKeyword);
+
+  const personalMatch = parseEntry(
+    "18 瑞幸",
+    [
+      {
+        id: "rule-1",
+        keyword: "瑞幸",
+        normalizedKeyword: "瑞幸",
+        category: "娱乐",
+        subcategory: "线下娱乐",
+      },
+    ],
+    now,
+  );
+  assert.equal(personalMatch.matchSource, "user_rule");
+  assert.equal(personalMatch.matchedKeyword, "瑞幸");
 });
