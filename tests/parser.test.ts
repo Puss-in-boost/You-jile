@@ -2,7 +2,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseEntry } from "../src/lib/parser";
 import { matchCategory } from "../src/lib/category-matcher";
-import { compareToPreviousMonth, dailyExpenseSeries, summarize } from "../src/lib/stats";
+import {
+  categoryChanges,
+  compareToPreviousMonth,
+  dailyExpenseSeries,
+  monthlyReport,
+  monthlyTrend,
+  spendingCalendar,
+  summarize,
+} from "../src/lib/stats";
 import type { Transaction } from "../src/types";
 
 const now = new Date(2026, 4, 18, 12);
@@ -366,4 +374,156 @@ test("outgoing transfer and gift language must not become income", () => {
     const result = parseEntry(input, [], now);
     assert.equal(result.type, "expense", input);
   }
+});
+
+
+test("six-month analytics trend keeps month order and integer cents", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (
+    id: string,
+    amount: string,
+    date: string,
+    type: "expense" | "income" = "expense",
+    category = "餐饮",
+  ): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    amount,
+    date,
+    type,
+    category,
+    subcategory: category === "餐饮" ? "正餐" : "",
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+
+  const rows = [
+    row("1", "100.00", "2026-03-02"),
+    row("2", "200.00", "2026-04-02"),
+    row("3", "300.00", "2026-05-02"),
+    row("4", "400.00", "2026-06-02"),
+    row("5", "500.00", "2026-07-02"),
+    row("6", "600.00", "2026-08-02"),
+    row("7", "1000.00", "2026-08-05", "income", "收入"),
+  ];
+  const trend = monthlyTrend(rows, "2026-08", 6);
+  assert.deepEqual(trend.map((item) => item.month), [
+    "2026-03",
+    "2026-04",
+    "2026-05",
+    "2026-06",
+    "2026-07",
+    "2026-08",
+  ]);
+  assert.deepEqual(trend.map((item) => item.expense), [
+    10000,
+    20000,
+    30000,
+    40000,
+    50000,
+    60000,
+  ]);
+  assert.equal(trend[5].income, 100000);
+  assert.equal(trend[5].balance, 40000);
+});
+
+test("category change contribution explains month-over-month movement", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (
+    id: string,
+    amount: string,
+    date: string,
+    category: string,
+    subcategory: string,
+  ): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    amount,
+    date,
+    category,
+    subcategory,
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows = [
+    row("1", "300.00", "2026-04-03", "餐饮", "正餐"),
+    row("2", "100.00", "2026-04-04", "交通", "打车"),
+    row("3", "500.00", "2026-05-03", "餐饮", "正餐"),
+    row("4", "40.00", "2026-05-04", "交通", "打车"),
+    row("5", "399.00", "2026-05-06", "购物", "数码家电"),
+  ];
+  const changes = categoryChanges(rows, "2026-05");
+  const food = changes.find((item) => item.category === "餐饮");
+  const transport = changes.find((item) => item.category === "交通");
+  const shopping = changes.find((item) => item.category === "购物");
+  assert.equal(food?.change, 20000);
+  assert.equal(transport?.change, -6000);
+  assert.equal(shopping?.change, 39900);
+  assert.equal(changes[0].category, "购物");
+});
+
+test("spending calendar identifies highest day and zero-spend days", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (id: string, amount: string, date: string): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    amount,
+    date,
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows = [
+    row("1", "20.00", "2026-05-01"),
+    row("2", "30.00", "2026-05-01"),
+    row("3", "168.00", "2026-05-12"),
+  ];
+  const calendar = spendingCalendar(rows, "2026-05");
+  assert.equal(calendar.days.length, 31);
+  assert.equal(calendar.days[0].total, 5000);
+  assert.equal(calendar.days[0].count, 2);
+  assert.equal(calendar.highest?.day, 12);
+  assert.equal(calendar.highest?.total, 16800);
+  assert.equal(calendar.zeroSpendDays, 29);
+});
+
+test("monthly report summarizes the biggest category and movement", () => {
+  const base = parseEntry("1 午饭", [], now) as Transaction;
+  const row = (
+    id: string,
+    amount: string,
+    date: string,
+    category: string,
+    subcategory: string,
+    type: "expense" | "income" = "expense",
+  ): Transaction => ({
+    ...base,
+    id,
+    userId: "u1",
+    amount,
+    date,
+    category,
+    subcategory,
+    type,
+    createdAt: `${date}T08:00:00.000Z`,
+    updatedAt: `${date}T08:00:00.000Z`,
+  });
+  const rows = [
+    row("1", "200.00", "2026-04-03", "餐饮", "正餐"),
+    row("2", "100.00", "2026-04-04", "交通", "打车"),
+    row("3", "500.00", "2026-05-03", "餐饮", "正餐"),
+    row("4", "50.00", "2026-05-04", "交通", "打车"),
+    row("5", "1200.00", "2026-05-05", "居住", "房租房贷"),
+    row("6", "3000.00", "2026-05-10", "收入", "工资薪酬", "income"),
+  ];
+  const report = monthlyReport(rows, "2026-05");
+  assert.equal(report.expense, 175000);
+  assert.equal(report.income, 300000);
+  assert.equal(report.balance, 125000);
+  assert.equal(report.topCategory?.name, "居住");
+  assert.equal(report.topIncrease?.category, "居住");
+  assert.equal(report.topDecrease?.category, "交通");
+  assert.equal(report.highestDay?.day, 5);
 });
