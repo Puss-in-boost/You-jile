@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   BarChart3,
   Camera,
@@ -124,31 +124,29 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
   const dailySeries = dailyExpenseSeries(ledger.rows, month);
   const dailyMax = Math.max(1, ...dailySeries.map((item) => item.value));
 
-  const quickDraft = useMemo<ParsedDraft | null>(() => {
-    if (!quickText.trim()) return null;
+  let quickDraft: ParsedDraft | null = null;
+  if (quickText.trim()) {
     try {
       const parsed = parseEntry(quickText, ledger.rules);
-      if (parsed.account === "未指定" && ledger.user?.defaultAccount && ledger.user.defaultAccount !== "未指定") {
-        return { ...parsed, account: ledger.user.defaultAccount };
-      }
-      return parsed;
+      quickDraft =
+        parsed.account === "未指定" &&
+        ledger.user?.defaultAccount &&
+        ledger.user.defaultAccount !== "未指定"
+          ? { ...parsed, account: ledger.user.defaultAccount }
+          : parsed;
     } catch {
-      return null;
+      quickDraft = null;
     }
-  }, [quickText, ledger.rules, ledger.user?.defaultAccount]);
+  }
 
-  const filteredRows = useMemo(
-    () =>
-      currentMonthRows.filter(
-        (row) =>
-          (type === "all" || row.type === type) &&
-          (categoryFilter === "all" || row.category === categoryFilter) &&
-          (accountFilter === "all" || row.account === accountFilter) &&
-          `${row.title} ${row.category} ${row.subcategory} ${row.account} ${row.amount}`
-            .toLowerCase()
-            .includes(search.toLowerCase()),
-      ),
-    [currentMonthRows, search, type, categoryFilter, accountFilter],
+  const filteredRows = currentMonthRows.filter(
+    (row) =>
+      (type === "all" || row.type === type) &&
+      (categoryFilter === "all" || row.category === categoryFilter) &&
+      (accountFilter === "all" || row.account === accountFilter) &&
+      `${row.title} ${row.category} ${row.subcategory} ${row.account} ${row.amount}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
   );
 
   const openAdd = () => {
