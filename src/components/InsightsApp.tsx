@@ -59,12 +59,15 @@ export function InsightsApp() {
   const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const queryTab = params.get("tab") as InsightsTab | null;
-    const queryMonth = params.get("month");
-    if (queryTab && validTabs.has(queryTab)) setTab(queryTab);
-    if (queryMonth && /^\d{4}-\d{2}$/.test(queryMonth)) setMonth(queryMonth);
-    setQueryReady(true);
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const queryTab = params.get("tab") as InsightsTab | null;
+      const queryMonth = params.get("month");
+      if (queryTab && validTabs.has(queryTab)) setTab(queryTab);
+      if (queryMonth && /^\d{4}-\d{2}$/.test(queryMonth)) setMonth(queryMonth);
+      setQueryReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -186,6 +189,7 @@ export function InsightsApp() {
 
         {tab === "trends" && (
           <TrendsTab
+            key={month}
             rows={ledger.rows}
             month={month}
             trend={trend}
@@ -198,6 +202,7 @@ export function InsightsApp() {
 
         {tab === "habits" && (
           <HabitsTab
+            key={month}
             month={month}
             calendar={calendar}
             recurring={recurring}
