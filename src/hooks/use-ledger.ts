@@ -133,14 +133,15 @@ export function useLedger() {
 
     // Paint the last confirmed ledger immediately. Session verification and the
     // fresh cloud fetch continue behind it, so repeat launches feel local-first.
-    if (restoredUserId) {
-      const cached = readCache(restoredUserId);
-      if (cached) {
-        setRows(cached.rows);
-        setRules(cached.rules);
-        setLoading(false);
-      }
-    }
+    const cached = restoredUserId ? readCache(restoredUserId) : null;
+    const cacheTimer = cached
+      ? window.setTimeout(() => {
+          if (!active) return;
+          setRows(cached.rows);
+          setRules(cached.rules);
+          setLoading(false);
+        }, 0)
+      : null;
 
     bootstrap()
       .then(async (result) => {
@@ -174,6 +175,7 @@ export function useLedger() {
 
     return () => {
       active = false;
+      if (cacheTimer !== null) window.clearTimeout(cacheTimer);
     };
   }, [refresh]);
 
