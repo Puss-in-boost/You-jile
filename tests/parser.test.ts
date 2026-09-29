@@ -9,17 +9,17 @@ const now = new Date(2026, 4, 18, 12);
 const samples = [
   ["35 午饭", "35.00", "餐饮", "正餐", "2026-05-18"],
   ["午饭35", "35.00", "餐饮", "正餐", "2026-05-18"],
-  ["18 瑞幸", "18.00", "餐饮", "咖啡饮品", "2026-05-18"],
+  ["18 瑞幸", "18.00", "餐饮", "饮料", "2026-05-18"],
   ["昨天打车26", "26.00", "交通", "打车", "2026-05-17"],
   ["26昨天打车", "26.00", "交通", "打车", "2026-05-17"],
   ["上个月房租1200", "1200.00", "居住", "房租房贷", "2026-04-18"],
   ["工资3600", "3600.00", "收入", "工资薪酬", "2026-05-18"],
-  ["买了杯拿铁22", "22.00", "餐饮", "咖啡饮品", "2026-05-18"],
+  ["买了杯拿铁22", "22.00", "餐饮", "饮料", "2026-05-18"],
   ["共享单车1.5", "1.50", "交通", "骑行", "2026-05-18"],
   ["昨晚火锅168", "168.00", "餐饮", "正餐", "2026-05-17"],
-  ["今天奶茶20", "20.00", "餐饮", "奶茶茶饮", "2026-05-18"],
+  ["今天奶茶20", "20.00", "餐饮", "饮料", "2026-05-18"],
   ["前天电影45", "45.00", "娱乐", "电影演出", "2026-05-16"],
-  ["１８　瑞幸", "18.00", "餐饮", "咖啡饮品", "2026-05-18"],
+  ["１８　瑞幸", "18.00", "餐饮", "饮料", "2026-05-18"],
 ] as const;
 
 for (const [input, amount, category, subcategory, date] of samples)
@@ -85,15 +85,15 @@ test("fuzzy matching stays conservative", () => {
   for (const text of ["luckn", "星巴"]) {
     const r = matchCategory(text);
     assert.equal(r.category, "餐饮");
-    assert.equal(r.subcategory, "咖啡饮品");
+    assert.equal(r.subcategory, "饮料");
     assert.equal(r.matchSource, "fuzzy");
     assert.ok(r.confidence > 0.65);
     assert.ok(r.matchedKeyword);
   }
-  assert.equal(matchCategory("拿鉄").subcategory, "咖啡饮品");
+  assert.equal(matchCategory("拿鉄").subcategory, "饮料");
   assert.equal(matchCategory("滴滴出行").category, "交通");
   assert.equal(matchCategory("盒马").subcategory, "生鲜买菜");
-  assert.equal(matchCategory("霸王茶姬").subcategory, "奶茶茶饮");
+  assert.equal(matchCategory("霸王茶姬").subcategory, "饮料");
   assert.equal(matchCategory("完全不认识的东西").category, "其他");
   assert.equal(matchCategory("巴").category, "其他");
 });
@@ -139,7 +139,7 @@ test("integer cents, month isolation and top-level grouping", () => {
     ...make("18.00", "2026-05-03"),
     title: "瑞幸",
     category: "餐饮",
-    subcategory: "咖啡饮品",
+    subcategory: "饮料",
     emoji: "☕",
   } as Transaction;
   const rows = [
@@ -155,7 +155,7 @@ test("integer cents, month isolation and top-level grouping", () => {
   assert.equal(s.balance, 8170);
   assert.equal(s.groups[0].name, "餐饮");
   assert.equal(s.groups[0].total, 1830);
-  assert.equal(s.subgroups.find((x) => x.subcategory === "咖啡饮品")?.total, 1800);
+  assert.equal(s.subgroups.find((x) => x.subcategory === "饮料")?.total, 1800);
 });
 
 
@@ -195,19 +195,19 @@ test("rich built-in dictionary covers common daily wording", () => {
     ["皮肤", "娱乐", "游戏"],
     ["王者荣耀皮肤", "娱乐", "游戏"],
     ["Steam", "娱乐", "游戏"],
-    ["水电费", "生活缴费", "水电燃气"],
-    ["中国移动话费", "生活缴费", "话费流量"],
-    ["宽带费", "生活缴费", "宽带网络"],
-    ["ChatGPT Plus", "订阅服务", "AI工具"],
-    ["GPT充值", "订阅服务", "AI工具"],
-    ["Claude Pro", "订阅服务", "AI工具"],
-    ["腾讯视频VIP", "订阅服务", "视频会员"],
-    ["网易云会员", "订阅服务", "音乐会员"],
+    ["水电费", "居住", "水电燃气"],
+    ["中国移动话费", "居住", "通信网络"],
+    ["宽带费", "居住", "通信网络"],
+    ["ChatGPT Plus", "订阅服务", "数字工具"],
+    ["GPT充值", "订阅服务", "数字工具"],
+    ["Claude Pro", "订阅服务", "数字工具"],
+    ["腾讯视频VIP", "订阅服务", "影音会员"],
+    ["网易云会员", "订阅服务", "影音会员"],
     ["iCloud", "订阅服务", "云存储"],
-    ["WPS超级会员", "订阅服务", "软件会员"],
+    ["WPS超级会员", "订阅服务", "数字工具"],
     ["会员", "订阅服务", "其他订阅"],
     ["VIP", "订阅服务", "其他订阅"],
-    ["皮肤科", "医疗", "门诊检查"],
+    ["皮肤科", "医疗", "就医检查"],
     ["鱼油", "医疗", "保健补剂"],
   ];
   for (const [input, category, subcategory] of cases) {
@@ -221,7 +221,7 @@ test("generic recharge stays unresolved but object-specific recharge is classifi
   assert.equal(matchCategory("充值").category, "其他");
   assert.deepEqual(
     [matchCategory("话费充值").category, matchCategory("话费充值").subcategory],
-    ["生活缴费", "话费流量"],
+    ["居住", "通信网络"],
   );
   assert.deepEqual(
     [matchCategory("游戏充值").category, matchCategory("游戏充值").subcategory],
@@ -229,7 +229,7 @@ test("generic recharge stays unresolved but object-specific recharge is classifi
   );
   assert.deepEqual(
     [matchCategory("GPT充值").category, matchCategory("GPT充值").subcategory],
-    ["订阅服务", "AI工具"],
+    ["订阅服务", "数字工具"],
   );
 });
 
@@ -290,4 +290,63 @@ test("platform memberships outrank generic shopping merchant matches", () => {
     assert.equal(result.subcategory, "平台会员", `${text} 细分类`);
   }
   assert.equal(matchCategory("淘宝买衣服").category, "购物");
+});
+
+
+test("1.3 taxonomy keeps purchase meaning ahead of shopping channel", () => {
+  const cases: Array<[string, string, string]> = [
+    ["拼多多纸巾20", "购物", "日用家居"],
+    ["淘宝买衣服168", "购物", "服饰鞋包"],
+    ["京东耳机399", "购物", "数码家电"],
+    ["淘宝168", "购物", "其他购物"],
+    ["瑞幸18", "餐饮", "饮料"],
+    ["霸王茶姬20", "餐饮", "饮料"],
+  ];
+  for (const [input, category, subcategory] of cases) {
+    const result = parseEntry(input, [], now);
+    assert.equal(result.category, category, input);
+    assert.equal(result.subcategory, subcategory, input);
+  }
+});
+
+test("1.3 alcohol and cocktail mixers share the 酒水 bucket", () => {
+  for (const input of ["金酒120", "伏特加88", "汤力水12", "苏打水6", "姜汁啤酒15"]) {
+    const result = parseEntry(input, [], now);
+    assert.equal(result.category, "餐饮", input);
+    assert.equal(result.subcategory, "酒水", input);
+  }
+  assert.equal(parseEntry("可乐6", [], now).subcategory, "饮料");
+});
+
+test("VPN and proxy subscriptions are digital tools", () => {
+  for (const input of ["VPN订阅25", "机场订阅30", "Clash订阅20"]) {
+    const result = parseEntry(input, [], now);
+    assert.equal(result.category, "订阅服务", input);
+    assert.equal(result.subcategory, "数字工具", input);
+  }
+});
+
+test("expanded income intent recognizes common real-world income wording", () => {
+  const cases: Array<[string, string]> = [
+    ["奖学金3000", "奖金补贴"],
+    ["退押金1200", "报销退款"],
+    ["项目款2000", "兼职副业"],
+    ["闲鱼卖相机2500", "转入所得"],
+    ["卖相机2500", "转入所得"],
+    ["老妈转我500", "转入所得"],
+    ["微信到账200", "转入所得"],
+  ];
+  for (const [input, subcategory] of cases) {
+    const result = parseEntry(input, [], now);
+    assert.equal(result.type, "income", input);
+    assert.equal(result.category, "收入", input);
+    assert.equal(result.subcategory, subcategory, input);
+  }
+});
+
+test("outgoing wording wins over transfer or red-packet income hints", () => {
+  for (const input of ["发红包100", "转账给朋友200", "游戏充值100"]) {
+    const result = parseEntry(input, [], now);
+    assert.equal(result.type, "expense", input);
+  }
 });
