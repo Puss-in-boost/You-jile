@@ -23,6 +23,7 @@ import { BackfillMode } from "./BackfillMode";
 import { InstallPrompt, usePWA } from "./InstallPrompt";
 import { Profile } from "./Profile";
 import { WalletPersonality } from "./WalletPersonality";
+import { MemoryMuseum } from "./MemoryMuseum";
 import { useLedger } from "@/hooks/use-ledger";
 import { parseEntry } from "@/lib/parser";
 import { dateLabel, localDate, money } from "@/lib/dates";
@@ -50,6 +51,22 @@ function currentDateLabel() {
     day: "numeric",
     weekday: "long",
   });
+}
+
+function classificationReason(draft: ParsedDraft) {
+  const keyword = draft.matchedKeyword ? `「${draft.matchedKeyword}」` : "";
+  switch (draft.matchSource) {
+    case "user_rule":
+      return `个人规则 ${keyword} 命中`;
+    case "exact":
+      return `默认关键词 ${keyword} 命中`;
+    case "alias":
+      return `默认别名 ${keyword} 命中`;
+    case "fuzzy":
+      return `模糊匹配到 ${keyword}`;
+    default:
+      return "没有命中现有规则，暂按默认兜底分类";
+  }
 }
 
 function LedgerRow({
@@ -245,14 +262,19 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
                   </button>
                 </div>
                 {quickDraft && (
-                  <div className="yj-preview">
-                    <Check size={13} />
-                    <span>
-                      {quickDraft.emoji} {quickDraft.type === "expense" ? "−" : "+"}¥
-                      {quickDraft.amount} · {quickDraft.category}{quickDraft.subcategory ? ` / ${quickDraft.subcategory}` : ""} · {dateLabel(quickDraft.date)}
-                      {quickDraft.account !== "未指定" ? ` · ${quickDraft.account}` : ""}
-                    </span>
-                    <em>{quickDraft.matchSource === "user_rule" ? "按你的习惯" : "预览"}</em>
+                  <div className="yj-preview-wrap">
+                    <div className="yj-preview">
+                      <Check size={13} />
+                      <span>
+                        {quickDraft.emoji} {quickDraft.type === "expense" ? "−" : "+"}¥
+                        {quickDraft.amount} · {quickDraft.category}{quickDraft.subcategory ? ` / ${quickDraft.subcategory}` : ""} · {dateLabel(quickDraft.date)}
+                        {quickDraft.account !== "未指定" ? ` · ${quickDraft.account}` : ""}
+                      </span>
+                      <em>{quickDraft.matchSource === "user_rule" ? "按你的习惯" : "预览"}</em>
+                    </div>
+                    <small className="yj-classification-reason">
+                      {classificationReason(quickDraft)}
+                    </small>
                   </div>
                 )}
                 {quickError && <p className="yj-form-error">{quickError}</p>}
@@ -270,7 +292,9 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
               </form>
             </section>
 
-            <WalletPersonality
+            <WalletPersonality rows={ledger.rows} />
+
+            <MemoryMuseum
               rows={ledger.rows}
               onOpenTransaction={openEdit}
             />
