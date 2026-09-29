@@ -16,9 +16,12 @@ import { EntryModal } from "./EntryModal";
 import { usePWA } from "./InstallPrompt";
 import { useLedger } from "@/hooks/use-ledger";
 import {
+  categoryChanges,
   compareToPreviousMonth,
-  dailyExpenseSeries,
   discover,
+  monthlyReport,
+  monthlyTrend,
+  spendingCalendar,
   summarize,
 } from "@/lib/stats";
 import { cents, dateLabel, localDate, money } from "@/lib/dates";
@@ -59,6 +62,36 @@ function clickableResetStyle(): React.CSSProperties {
 
 function sumRows(rows: Transaction[]) {
   return rows.reduce((sum, row) => sum + cents(row.amount), 0);
+}
+
+function monthLabel(month: string) {
+  const [, value] = month.split("-");
+  return `${Number(value)}月`;
+}
+
+function trendPoints(values: number[], max: number) {
+  const width = 520;
+  const left = 20;
+  const right = 20;
+  const top = 16;
+  const bottom = 128;
+  const span = Math.max(1, values.length - 1);
+  return values
+    .map((value, index) => {
+      const x = left + ((width - left - right) * index) / span;
+      const y = bottom - ((bottom - top) * value) / Math.max(1, max);
+      return `${x},${y}`;
+    })
+    .join(" ");
+}
+
+function heatLevel(value: number, max: number) {
+  if (!value || !max) return 0;
+  const ratio = value / max;
+  if (ratio >= 0.75) return 4;
+  if (ratio >= 0.5) return 3;
+  if (ratio >= 0.25) return 2;
+  return 1;
 }
 
 function groupRows(
@@ -273,8 +306,20 @@ export function InsightsApp() {
   const stats = summarize(ledger.rows, month);
   const discoveries = discover(ledger.rows, month);
   const monthCompare = compareToPreviousMonth(ledger.rows, month);
-  const dailySeries = dailyExpenseSeries(ledger.rows, month);
-  const dailyMax = Math.max(1, ...dailySeries.map((item) => item.value));
+  const trend = monthlyTrend(ledger.rows, month, 6);
+  const changes = categoryChanges(ledger.rows, month);
+  const calendar = spendingCalendar(ledger.rows, month);
+  const report = monthlyReport(ledger.rows, month);
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(null);
+  const selectedDay = selectedCalendarDay
+    ? calendar.days.find((item) => item.day === selectedCalendarDay) ?? null
+    : calendar.highest;
+  const trendMax = Math.max(
+    1,
+    ...trend.flatMap((item) => [item.expense, item.income]),
+  );
+  const expensePoints = trendPoints(trend.map((item) => item.expense), trendMax);
+  const incomePoints = trendPoints(trend.map((item) => item.income), trendMax);
   const subgroups = useMemo(() => stats.subgroups.slice(0, 10), [stats.subgroups]);
 
   const openEdit = (row: Transaction) => {
@@ -303,7 +348,11 @@ export function InsightsApp() {
             className="yj-month-input"
             type="month"
             value={month}
-            onChange={(event) => event.target.value && setMonth(event.target.value)}
+            onChange={(event) => {
+              if (!event.target.value) return;
+              setMonth(event.target.value);
+              setSelectedCalendarDay(null);
+            }}
           />
         </header>
 
@@ -312,6 +361,54 @@ export function InsightsApp() {
           <div className="yj-card yj-stat"><span>收入</span><strong>¥{money(stats.income)}</strong></div>
           <div className="yj-card yj-stat yj-stat-wide"><span>结余</span><strong>¥{money(stats.balance)}</strong></div>
         </div>
+
+        <section className="yj-card yj-insight-card">
+          <div className="yj-card-title">
+            <div>
+              <strong>近 6 个月资金趋势</strong>
+              <small>同时看支出和已记录收入，避免只盯着某一个月</small>
+            </div>
+          </div>
+          {trend.some((item) => item.expense || item.income) ? (
+            <>
+              <div className="yj-trend-legend" aria-hidden="true">
+                <span><i className="yj-trend-dot yj-trend-dot-expense" />支出</span>
+                <span><i className="yj-trend-dot yj-trend-dot-income" />收入</span>
+              </div>
+              <div className="yj-trend-chart" role="img" aria-label="近六个月收入与支出趋势">
+                <svg viewBox="0 0 520 145" preserveAspectRatio="none">
+                  <line x1="20" y1="128" x2="500" y2="128" className="yj-trend-axis" />
+                  <line x1="20" y1="72" x2="500" y2="72" className="yj-trend-gridline" />
+                  <polyline points={expensePoints} className="yj-trend-line yj-trend-expense" />
+                  <polyline points={incomePoints} className="yj-trend-line yj-trend-income" />
+                  {trend.map((item, index) => {
+                    const x = 20 + (480 * index) / Math.max(1, trend.length - 1);
+                    const expenseY = 128 - (112 * item.expense) / trendMax;
+                    const incomeY = 128 - (112 * item.income) / trendMax;
+                    return (
+                      <g key={item.month}>
+                        <circle cx={x} cy={expenseY} r="3.5" className="yj-trend-point yj-trend-point-expense" />
+                        <circle cx={x} cy={incomeY} r="3.5" className="yj-trend-point yj-trend-point-income" />
+                      </g>
+                    );
+                  })}
+                </svg>
+                <div className="yj-trend-labels">
+                  {trend.map((item) => <span key={item.month}>{monthLabel(item.month)}</span>)}
+                </div>
+              </div>
+              <div className="yj-trend-summary">
+                <span>6个月月均支出</span>
+                <strong>
+                  ¥{money(Math.round(trend.reduce((sum, item) => sum + item.expense, 0) / trend.length))}
+                </strong>
+                <small>收入趋势仅反映你已经记录的收入。</small>
+              </div>
+            </>
+          ) : (
+            <div className="yj-empty"><span>📈</span><p>连续记录几个月后，这里会出现资金趋势。</p></div>
+          )}
+        </section>
 
         <section className="yj-card yj-insight-card">
           <div className="yj-card-title">
@@ -396,15 +493,111 @@ export function InsightsApp() {
 
         <section className="yj-card yj-insight-card">
           <div className="yj-card-title">
-            <div><strong>每日支出</strong><small>看看这个月的钱集中花在哪几天</small></div>
+            <div><strong>支出变化贡献</strong><small>本月比上月的变化，具体来自哪些分类</small></div>
           </div>
-          <div className="yj-daily-chart" aria-label="每日支出趋势">
-            {dailySeries.map((item) => (
-              <div className="yj-daily-column" key={item.date} title={`${item.date} · ¥${money(item.value)}`}>
-                <span style={{ height: `${item.value ? Math.max(8, Math.round((item.value / dailyMax) * 100)) : 2}%` }} />
-                {(item.day === 1 || item.day % 5 === 0 || item.day === dailySeries.length) && <small>{item.day}</small>}
-              </div>
+          {changes.length ? (
+            <div className="yj-change-list">
+              {changes.slice(0, 6).map((item) => {
+                const positive = item.change > 0;
+                const magnitude = Math.abs(item.change);
+                const maxChange = Math.max(1, ...changes.map((change) => Math.abs(change.change)));
+                return (
+                  <div className="yj-change-row" key={item.category}>
+                    <div className="yj-change-main">
+                      <span>{item.emoji} {item.category}</span>
+                      <strong className={positive ? "up" : "down"}>
+                        {positive ? "+" : "−"}¥{money(magnitude)}
+                      </strong>
+                    </div>
+                    <div className="yj-change-track">
+                      <span
+                        className={positive ? "up" : "down"}
+                        style={{ width: `${Math.max(5, Math.round((magnitude / maxChange) * 100))}%` }}
+                      />
+                    </div>
+                    <small>
+                      上月 ¥{money(item.previous)} → 本月 ¥{money(item.current)}
+                    </small>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="yj-empty"><span>↔️</span><p>本月和上月暂时没有可比较的分类变化。</p></div>
+          )}
+        </section>
+
+        <section className="yj-card yj-insight-card">
+          <div className="yj-card-title">
+            <div><strong>消费日历</strong><small>颜色越深，当天支出越高。点日期看当天金额。</small></div>
+          </div>
+          <div className="yj-calendar-weekdays" aria-hidden="true">
+            {["一","二","三","四","五","六","日"].map((day) => <span key={day}>{day}</span>)}
+          </div>
+          <div className="yj-calendar-grid">
+            {Array.from({ length: calendar.leadingBlankDays }, (_, index) => (
+              <span className="yj-calendar-blank" key={`blank-${index}`} />
             ))}
+            {calendar.days.map((item) => (
+              <button
+                type="button"
+                key={item.date}
+                className={`yj-calendar-day level-${heatLevel(item.total, calendar.max)} ${selectedDay?.day === item.day ? "selected" : ""}`}
+                onClick={() => setSelectedCalendarDay(item.day)}
+                aria-label={`${item.date}，支出 ${money(item.total)} 元，共 ${item.count} 笔`}
+                title={`${item.date} · ¥${money(item.total)} · ${item.count}笔`}
+              >
+                <span>{item.day}</span>
+              </button>
+            ))}
+          </div>
+          <div className="yj-calendar-detail">
+            {selectedDay ? (
+              <>
+                <div>
+                  <span>{selectedDay.date}</span>
+                  <strong>¥{money(selectedDay.total)}</strong>
+                </div>
+                <small>{selectedDay.count} 笔支出 · 本月 {calendar.zeroSpendDays} 天零支出</small>
+              </>
+            ) : (
+              <small>这个月还没有支出记录。</small>
+            )}
+          </div>
+        </section>
+
+        <section className="yj-card yj-insight-card yj-monthly-report">
+          <div className="yj-card-title">
+            <div><strong>{Number(month.slice(5))} 月月报</strong><small>把数字压缩成几句真正有用的话</small></div>
+          </div>
+          <div className="yj-report-hero">
+            <span>本月支出</span>
+            <strong>¥{money(report.expense)}</strong>
+            <small>
+              {report.expensePercent == null
+                ? "上月暂无可比较记录"
+                : `较上月 ${report.expensePercent > 0 ? "增加" : report.expensePercent < 0 ? "减少" : "持平"} ${Math.abs(report.expensePercent)}%`}
+            </small>
+          </div>
+          <div className="yj-report-list">
+            {report.topCategory && (
+              <div><span>{report.topCategory.emoji}</span><p><strong>{report.topCategory.name}</strong> 是最大支出，¥{money(report.topCategory.total)}，占 {report.topCategory.share}%。</p></div>
+            )}
+            {report.topIncrease && (
+              <div><span>↗</span><p><strong>{report.topIncrease.category}</strong> 是最大增长项，比上月多 ¥{money(report.topIncrease.change)}。</p></div>
+            )}
+            {report.topDecrease && (
+              <div><span>↘</span><p><strong>{report.topDecrease.category}</strong> 比上月少 ¥{money(Math.abs(report.topDecrease.change))}。</p></div>
+            )}
+            {report.highestDay && (
+              <div><span>📅</span><p><strong>{report.highestDay.date.slice(5).replace("-", "月")}日</strong> 是消费最高的一天，支出 ¥{money(report.highestDay.total)}。</p></div>
+            )}
+          </div>
+          <div className="yj-report-balance">
+            <span>已记录收入 ¥{money(report.income)}</span>
+            <strong className={report.balance >= 0 ? "positive" : "negative"}>
+              结余 {report.balance >= 0 ? "+" : "−"}¥{money(Math.abs(report.balance))}
+            </strong>
           </div>
         </section>
 
