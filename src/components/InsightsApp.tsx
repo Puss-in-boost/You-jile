@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   BarChart3,
+  ChevronLeft,
+  ChevronRight,
   CircleUserRound,
   Home,
   Plus,
@@ -23,7 +25,7 @@ import {
   spendingCalendar,
   summarize,
 } from "@/lib/stats";
-import { localDate } from "@/lib/dates";
+import { localDate, shiftMonth } from "@/lib/dates";
 import type { Transaction } from "@/types";
 import {
   CategoryDrilldown,
@@ -86,7 +88,7 @@ export function InsightsApp() {
   const calendar = spendingCalendar(ledger.rows, month);
   const report = monthlyReport(ledger.rows, month);
   const recurring = recurringExpenses(ledger.rows, month, 6);
-  const merchants = merchantStats(ledger.rows, month, 8);
+  const merchants = merchantStats(ledger.rows, month, 6);
   const anomalies = spendingAnomalies(ledger.rows, month, 6);
   const recurringTotal = recurring.reduce(
     (sum, item) => sum + item.averageMonthly,
@@ -101,6 +103,11 @@ export function InsightsApp() {
 
   const changeTab = (next: InsightsTab) => {
     setTab(next);
+    setDrill(null);
+  };
+
+  const changeMonth = (next: string) => {
+    setMonth(next > currentMonth ? currentMonth : next);
     setDrill(null);
   };
 
@@ -122,16 +129,44 @@ export function InsightsApp() {
             <h1>钱都去哪了</h1>
             <p>{tabDescription(tab)}</p>
           </div>
-          <input
-            className="yj-month-input"
-            type="month"
-            value={month}
-            onChange={(event) => {
-              if (!event.target.value) return;
-              setMonth(event.target.value);
-              setDrill(null);
-            }}
-          />
+          <div className="yj-insights-monthbar" aria-label="选择分析月份">
+            <button
+              type="button"
+              className="yj-month-step"
+              onClick={() => changeMonth(shiftMonth(month, -1))}
+              aria-label="上一个月"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <input
+              className="yj-month-input"
+              type="month"
+              value={month}
+              max={currentMonth}
+              onChange={(event) => {
+                if (!event.target.value) return;
+                changeMonth(event.target.value);
+              }}
+            />
+            <button
+              type="button"
+              className="yj-month-step"
+              disabled={month >= currentMonth}
+              onClick={() => changeMonth(shiftMonth(month, 1))}
+              aria-label="下一个月"
+            >
+              <ChevronRight size={16} />
+            </button>
+            {month !== currentMonth && (
+              <button
+                type="button"
+                className="yj-month-current"
+                onClick={() => changeMonth(currentMonth)}
+              >
+                本月
+              </button>
+            )}
+          </div>
         </header>
 
         <InsightsTabs active={tab} onChange={changeTab} />
