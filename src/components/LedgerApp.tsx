@@ -27,7 +27,7 @@ import { useLedger } from "@/hooks/use-ledger";
 import { parseEntry } from "@/lib/parser";
 import { dateLabel, localDate, money } from "@/lib/dates";
 import { accounts, categories } from "@/lib/categories";
-import { compareToPreviousMonth, dailyExpenseSeries, summarize } from "@/lib/stats";
+import { compareToPreviousMonth, dailyExpenseSeries, discover, summarize } from "@/lib/stats";
 import type { ParsedDraft, Transaction } from "@/types";
 
 export type View = "home" | "bills" | "insights" | "me";
@@ -115,6 +115,7 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
   const quickRef = useRef<HTMLInputElement>(null);
 
   const stats = summarize(ledger.rows, month);
+  const discoveries = discover(ledger.rows, month);
   const currentMonthRows = stats.selected;
   const recent = ledger.rows.slice(0, 4);
   const top = stats.groups[0];
