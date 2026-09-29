@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { categoryRules } from "@/db/schema";
+import { categoryRules, transactions } from "@/db/schema";
 import {
   apiError,
   ApiError,
@@ -10,10 +10,18 @@ import {
 } from "@/lib/auth-server";
 import {
   categories,
+  getDisplayEmoji,
   getSubcategories,
   normalize,
   normalizeCategoryPair,
 } from "@/lib/categories";
+import { mapTransactionRowToTransaction } from "@/lib/mapper";
+import {
+  classifyWithCurrentRules,
+  dependsOnRule,
+  needsReclassification,
+} from "@/lib/rule-reclassification";
+import type { CategoryRule } from "@/types";
 
 export async function POST(req: Request) {
   try {
@@ -63,20 +71,126 @@ export async function POST(req: Request) {
   }
 }
 
+function mapCategoryRule(row: typeof categoryRules.$inferSelect): CategoryRule {
+  const pair = normalizeCategoryPair(row.category, row.subcategory);
+  return {
+    id: row.id,
+    keyword: row.keyword,
+    normalizedKeyword: row.normalizedKeyword,
+    category: pair.category,
+    subcategory: pair.subcategory,
+  };
+}
+
 export async function DELETE(req: Request) {
   try {
     checkOrigin(req);
     const user = await requireUser(req);
     const id = new URL(req.url).searchParams.get("id");
     if (!z.uuid().safeParse(id).success) throw new ApiError("规则 ID 无效");
-    await withUser(user.id, (tx) =>
-      tx
-        .delete(categoryRules)
-        .where(
-          and(eq(categoryRules.id, id!), eq(categoryRules.userId, user.id)),
-        ),
-    );
-    return Response.json({ ok: true });
+
+    const result = await withUser(user.id, async (tx) => {
+      const where = and(
+        eq(categoryRules.id, id!),
+        eq(categoryRules.userId, user.id),
+      );
+      const [rule] = await tx.select().from(categoryRules).where(where);
+      if (!rule) return { ok: true, reclassified: 0 };
+
+      const [ruleRows, transactionRows] = await Promise.all([
+        tx
+          .select()
+          .from(categoryRules)
+          .where(eq(categoryRules.userId, user.id)),
+        tx
+          .select()
+          .from(transactions)
+          .where(eq(transactions.userId, user.id)),
+      ]);
+
+      const removedRule = mapCategoryRule(rule);
+      const remainingRules = ruleRows
+        .filter((item) => item.id !== rule.id)
+        .map(mapCategoryRule);
+      const affected = transactionRows
+        .map(mapTransactionRowToTransaction)
+        .filter((row) => dependsOnRule(row, removedRule))
+        .map((row) => classifyWithCurrentRules(row, remainingRules));
+
+      await tx.delete(categoryRules).where(where);
+
+      for (const next of affected) {
+        await tx
+          .update(transactions)
+          .set({
+            type: next.type,
+            category: next.category,
+            subcategory: next.subcategory,
+            emoji: next.emoji,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(transactions.id, next.id),
+              eq(transactions.userId, user.id),
+            ),
+          );
+      }
+
+      return { ok: true, reclassified: affected.length };
+    });
+
+    return Response.json(result);
+  } catch (e) {
+    return apiError(e);
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    checkOrigin(req);
+    const user = await requireUser(req);
+
+    const result = await withUser(user.id, async (tx) => {
+      const [ruleRows, transactionRows] = await Promise.all([
+        tx
+          .select()
+          .from(categoryRules)
+          .where(eq(categoryRules.userId, user.id)),
+        tx
+          .select()
+          .from(transactions)
+          .where(eq(transactions.userId, user.id)),
+      ]);
+
+      const currentRules = ruleRows.map(mapCategoryRule);
+      const affected = transactionRows
+        .map(mapTransactionRowToTransaction)
+        .filter((row) => needsReclassification(row, currentRules))
+        .map((row) => classifyWithCurrentRules(row, currentRules));
+
+      for (const next of affected) {
+        await tx
+          .update(transactions)
+          .set({
+            type: next.type,
+            category: next.category,
+            subcategory: next.subcategory,
+            emoji: getDisplayEmoji(next.category, next.subcategory),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(transactions.id, next.id),
+              eq(transactions.userId, user.id),
+            ),
+          );
+      }
+
+      return { ok: true, reclassified: affected.length };
+    });
+
+    return Response.json(result);
   } catch (e) {
     return apiError(e);
   }
