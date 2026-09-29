@@ -129,21 +129,31 @@ export function OverviewTab({
     merchants,
     monthPercent,
   });
+  const biggestMove =
+    !report.topIncrease
+      ? report.topDecrease
+      : !report.topDecrease
+        ? report.topIncrease
+        : Math.abs(report.topIncrease.change) >= Math.abs(report.topDecrease.change)
+          ? report.topIncrease
+          : report.topDecrease;
 
   return (
-    <div className="yj-insight-tab-panel">
-      <div className="yj-stat-grid">
+    <div className="yj-insight-tab-panel" role="tabpanel">
+      <div className="yj-overview-stat-grid">
         <div className="yj-card yj-stat">
           <span>支出</span>
           <strong>¥{money(stats.expense)}</strong>
         </div>
         <div className="yj-card yj-stat">
-          <span>收入</span>
+          <span>已记录收入</span>
           <strong>¥{money(stats.income)}</strong>
         </div>
-        <div className="yj-card yj-stat yj-stat-wide">
+        <div className="yj-card yj-stat">
           <span>结余</span>
-          <strong>¥{money(stats.balance)}</strong>
+          <strong className={stats.balance < 0 ? "negative" : "positive"}>
+            {stats.balance < 0 ? "−" : ""}¥{money(Math.abs(stats.balance))}
+          </strong>
         </div>
       </div>
 
@@ -159,13 +169,31 @@ export function OverviewTab({
             <small>总览只放结论，证据留给后面的趋势和习惯</small>
           </div>
         </div>
-        <div className="yj-report-hero">
-          <span>本月支出</span>
-          <strong>¥{money(report.expense)}</strong>
+        <div className="yj-report-pulse">
+          <span>环比节奏</span>
+          <strong
+            className={
+              report.expensePercent == null
+                ? ""
+                : report.expensePercent > 0
+                  ? "up"
+                  : report.expensePercent < 0
+                    ? "down"
+                    : ""
+            }
+          >
+            {report.expensePercent == null
+              ? "暂无对照"
+              : report.expensePercent === 0
+                ? "持平"
+                : `${report.expensePercent > 0 ? "↑" : "↓"} ${Math.abs(report.expensePercent)}%`}
+          </strong>
           <small>
             {report.expensePercent == null
-              ? "上月暂无可比较记录"
-              : `较上月 ${report.expensePercent > 0 ? "增加" : report.expensePercent < 0 ? "减少" : "持平"} ${Math.abs(report.expensePercent)}%`}
+              ? "再多一个月，就能开始比较节奏。"
+              : report.expenseChange === 0
+                ? "和上月几乎同速巡航。"
+                : `比上月${report.expenseChange > 0 ? "多" : "少"} ¥${money(Math.abs(report.expenseChange))}`}
           </small>
         </div>
         <div className="yj-report-list">
@@ -178,21 +206,12 @@ export function OverviewTab({
               </p>
             </div>
           )}
-          {report.topIncrease && (
+          {biggestMove && (
             <div>
-              <span>↗</span>
+              <span>{biggestMove.change > 0 ? "↗" : "↘"}</span>
               <p>
-                <strong>{report.topIncrease.category}</strong> 是最大增长项，
-                比上月多 ¥{money(report.topIncrease.change)}。
-              </p>
-            </div>
-          )}
-          {report.topDecrease && (
-            <div>
-              <span>↘</span>
-              <p>
-                <strong>{report.topDecrease.category}</strong> 比上月少
-                ¥{money(Math.abs(report.topDecrease.change))}。
+                <strong>{biggestMove.category}</strong> 是本月最明显的分类变化，
+                比上月{biggestMove.change > 0 ? "多" : "少"} ¥{money(Math.abs(biggestMove.change))}。
               </p>
             </div>
           )}
@@ -303,7 +322,7 @@ export function TrendsTab({
   const mix = categoryTrend(rows, month, 6, 4);
 
   return (
-    <div className="yj-insight-tab-panel">
+    <div className="yj-insight-tab-panel" role="tabpanel">
       <section className="yj-card yj-insight-card">
         <div className="yj-card-title">
           <div>
@@ -527,7 +546,7 @@ export function HabitsTab({
     : calendar.highest;
 
   return (
-    <div className="yj-insight-tab-panel">
+    <div className="yj-insight-tab-panel" role="tabpanel">
       <section className="yj-card yj-insight-card">
         <div className="yj-card-title">
           <div>
@@ -590,7 +609,7 @@ export function HabitsTab({
         </div>
         {merchants.length ? (
           <div className="yj-merchant-list">
-            {merchants.map((item, index) => (
+            {merchants.slice(0, 6).map((item, index) => (
               <div className="yj-merchant-row" key={`${item.title}-${index}`}>
                 <span className="yj-merchant-rank">{index + 1}</span>
                 <span className="yj-merchant-emoji">{item.emoji}</span>
@@ -623,7 +642,7 @@ export function HabitsTab({
               <small>{recurring.length} 个候选 · 仅根据已记录流水推断</small>
             </div>
             <div className="yj-recurring-list">
-              {recurring.slice(0, 6).map((item) => (
+              {recurring.slice(0, 5).map((item) => (
                 <div
                   className="yj-recurring-row"
                   key={`${item.title}-${item.category}-${item.subcategory}`}
