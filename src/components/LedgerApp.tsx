@@ -22,11 +22,12 @@ import { EntryModal } from "./EntryModal";
 import { BackfillMode } from "./BackfillMode";
 import { InstallPrompt, usePWA } from "./InstallPrompt";
 import { Profile } from "./Profile";
+import { WalletPersonality } from "./WalletPersonality";
 import { useLedger } from "@/hooks/use-ledger";
 import { parseEntry } from "@/lib/parser";
 import { dateLabel, localDate, money } from "@/lib/dates";
 import { accounts, categories } from "@/lib/categories";
-import { compareToPreviousMonth, dailyExpenseSeries, discover, summarize } from "@/lib/stats";
+import { compareToPreviousMonth, dailyExpenseSeries, summarize } from "@/lib/stats";
 import type { ParsedDraft, Transaction } from "@/types";
 
 export type View = "home" | "bills" | "insights" | "me";
@@ -114,7 +115,6 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
   const quickRef = useRef<HTMLInputElement>(null);
 
   const stats = summarize(ledger.rows, month);
-  const discoveries = discover(ledger.rows, month);
   const currentMonthRows = stats.selected;
   const recent = ledger.rows.slice(0, 4);
   const top = stats.groups[0];
@@ -271,11 +271,10 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
               </form>
             </section>
 
-            <section className="yj-discovery">
-              <span>✨ 今天发现</span>
-              <strong>{discoveries[0]?.title ?? "从第一笔开始了解自己的钱"}</strong>
-              <p>{discoveries[0]?.text ?? "记下一笔，慢慢看见自己的消费习惯。"}</p>
-            </section>
+            <WalletPersonality
+              rows={ledger.rows}
+              onOpenTransaction={openEdit}
+            />
 
             <section className="yj-section">
               <div className="yj-section-head">
