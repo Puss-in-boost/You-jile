@@ -4091,3 +4091,155 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
   .yj-backfill-footer { align-items: stretch; flex-direction: column; }
   .yj-backfill-footer button { width: 100%; }
 }
+
+
+/* --------------------------------------------------------------------------
+   1.4 Analytics — trend, change contribution, spending calendar, monthly report
+   -------------------------------------------------------------------------- */
+.yj-trend-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  color: #7f7f79;
+  font-size: 9px;
+}
+.yj-trend-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.yj-trend-dot { width: 7px; height: 7px; border-radius: 999px; }
+.yj-trend-dot-expense { background: #ab725f; }
+.yj-trend-dot-income { background: #66866b; }
+.yj-trend-chart { margin-top: 8px; }
+.yj-trend-chart svg { display: block; width: 100%; height: 150px; overflow: visible; }
+.yj-trend-axis { stroke: #dfdfda; stroke-width: 1; }
+.yj-trend-gridline { stroke: #eeeeea; stroke-width: 1; stroke-dasharray: 4 5; }
+.yj-trend-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.yj-trend-expense { stroke: #ab725f; }
+.yj-trend-income { stroke: #66866b; }
+.yj-trend-point { stroke: #fff; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.yj-trend-point-expense { fill: #ab725f; }
+.yj-trend-point-income { fill: #66866b; }
+.yj-trend-labels {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+  margin-top: -3px;
+  color: #a2a29c;
+  font-size: 8px;
+  text-align: center;
+}
+.yj-trend-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 5px 12px;
+  margin-top: 14px;
+  padding: 13px 14px;
+  border-radius: 15px;
+  background: #f7f7f3;
+}
+.yj-trend-summary > span { color: #8d8d87; font-size: 9px; }
+.yj-trend-summary > strong { color: #2b2b27; font-size: 15px; }
+.yj-trend-summary > small { grid-column: 1 / -1; color: #aaa9a3; font-size: 8px; }
+
+.yj-change-list { display: flex; flex-direction: column; gap: 15px; margin-top: 17px; }
+.yj-change-row { min-width: 0; }
+.yj-change-main { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #5e5e59; font-size: 10px; }
+.yj-change-main strong { white-space: nowrap; font-size: 11px; }
+.yj-change-main strong.up { color: #a65d4d; }
+.yj-change-main strong.down { color: #43825b; }
+.yj-change-track { overflow: hidden; height: 6px; margin-top: 7px; border-radius: 999px; background: #f0f0ec; }
+.yj-change-track > span { display: block; height: 100%; border-radius: inherit; }
+.yj-change-track > span.up { background: #bc826e; }
+.yj-change-track > span.down { background: #78906b; }
+.yj-change-row > small { display: block; margin-top: 5px; color: #aaa9a3; font-size: 8px; }
+
+.yj-calendar-weekdays,
+.yj-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.yj-calendar-weekdays { margin-top: 18px; color: #aaa9a3; font-size: 8px; text-align: center; }
+.yj-calendar-grid { margin-top: 8px; }
+.yj-calendar-blank { aspect-ratio: 1; }
+.yj-calendar-day {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #696963 !important;
+  font-size: 9px;
+  transition: transform .12s ease, border-color .12s ease;
+}
+.yj-calendar-day.level-0 { background: #f4f4f0; color: #b7b7b0 !important; }
+.yj-calendar-day.level-1 { background: #e6ede0; }
+.yj-calendar-day.level-2 { background: #c9d8bf; }
+.yj-calendar-day.level-3 { background: #9db68f; color: #34412f !important; }
+.yj-calendar-day.level-4 { background: #6f8b65; color: #fff !important; }
+.yj-calendar-day.selected { border-color: #242421; box-shadow: inset 0 0 0 1px #242421; }
+@media (hover:hover) and (pointer:fine) {
+  .yj-calendar-day:hover { transform: translateY(-1px); }
+}
+.yj-calendar-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 13px;
+  padding: 12px 13px;
+  border-radius: 14px;
+  background: #f8f8f5;
+}
+.yj-calendar-detail > div { min-width: 0; }
+.yj-calendar-detail span { display: block; color: #969690; font-size: 8px; }
+.yj-calendar-detail strong { display: block; margin-top: 3px; color: #292926; font-size: 15px; }
+.yj-calendar-detail small { color: #92928c; font-size: 8px; text-align: right; }
+
+.yj-monthly-report { background: linear-gradient(180deg, #fff 0%, #fafbf7 100%); }
+.yj-report-hero {
+  margin-top: 17px;
+  padding: 17px;
+  border-radius: 18px;
+  background: #20201d;
+  color: #fff;
+}
+.yj-report-hero > span { display: block; color: #c9c9c2; font-size: 9px; }
+.yj-report-hero > strong { display: block; margin-top: 4px; font-size: 26px; letter-spacing: -.7px; }
+.yj-report-hero > small { display: block; margin-top: 7px; color: #c3c3bd; font-size: 9px; }
+.yj-report-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.yj-report-list > div {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 11px 12px;
+  border-radius: 14px;
+  background: #f5f6f1;
+}
+.yj-report-list > div > span { display: grid; place-items: center; min-height: 20px; color: #65775e; font-size: 14px; }
+.yj-report-list p { color: #6e6e68; font-size: 9px; line-height: 1.65; }
+.yj-report-list p strong { color: #343430; }
+.yj-report-balance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid #e9ebe5;
+}
+.yj-report-balance span { color: #969690; font-size: 9px; }
+.yj-report-balance strong { font-size: 11px; }
+.yj-report-balance strong.positive { color: #43825b; }
+.yj-report-balance strong.negative { color: #a65d4d; }
+
+@media (max-width: 420px) {
+  .yj-trend-chart svg { height: 132px; }
+  .yj-calendar-weekdays,
+  .yj-calendar-grid { gap: 4px; }
+  .yj-calendar-day { border-radius: 8px; }
+  .yj-calendar-detail { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .yj-calendar-detail small { text-align: left; }
+  .yj-report-balance { align-items: flex-start; flex-direction: column; gap: 6px; }
+}

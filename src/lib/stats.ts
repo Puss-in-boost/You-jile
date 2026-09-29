@@ -145,3 +145,158 @@ export function dailyExpenseSeries(rows: Transaction[], month: string) {
     return { day, date, value };
   });
 }
+
+
+export type MonthlyTrendPoint = {
+  month: string;
+  expense: number;
+  income: number;
+  balance: number;
+};
+
+export function monthlyTrend(
+  rows: Transaction[],
+  month: string,
+  count = 6,
+): MonthlyTrendPoint[] {
+  return Array.from({ length: count }, (_, index) => {
+    const target = shiftMonth(month, index - count + 1);
+    const summary = summarize(rows, target);
+    return {
+      month: target,
+      expense: summary.expense,
+      income: summary.income,
+      balance: summary.balance,
+    };
+  });
+}
+
+export type CategoryChange = {
+  category: string;
+  emoji: string;
+  current: number;
+  previous: number;
+  change: number;
+};
+
+export function categoryChanges(rows: Transaction[], month: string): CategoryChange[] {
+  const previousMonth = shiftMonth(month, -1);
+  const current = summarize(rows, month).groups;
+  const previous = summarize(rows, previousMonth).groups;
+  const names = new Set([
+    ...current.map((item) => item.name),
+    ...previous.map((item) => item.name),
+  ]);
+
+  return [...names]
+    .map((category) => {
+      const currentItem = current.find((item) => item.name === category);
+      const previousItem = previous.find((item) => item.name === category);
+      const definition = getCategory(category);
+      const currentTotal = currentItem?.total ?? 0;
+      const previousTotal = previousItem?.total ?? 0;
+      return {
+        category,
+        emoji: definition.emoji,
+        current: currentTotal,
+        previous: previousTotal,
+        change: currentTotal - previousTotal,
+      };
+    })
+    .filter((item) => item.change !== 0)
+    .sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+}
+
+export type SpendingCalendarDay = {
+  day: number;
+  date: string;
+  total: number;
+  count: number;
+};
+
+export function spendingCalendar(
+  rows: Transaction[],
+  month: string,
+): {
+  days: SpendingCalendarDay[];
+  leadingBlankDays: number;
+  max: number;
+  highest: SpendingCalendarDay | null;
+  zeroSpendDays: number;
+} {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const dayCount = new Date(year, monthNumber, 0).getDate();
+  const leadingBlankDays = (new Date(year, monthNumber - 1, 1).getDay() + 6) % 7;
+  const days = Array.from({ length: dayCount }, (_, index) => {
+    const day = index + 1;
+    const date = `${month}-${String(day).padStart(2, "0")}`;
+    const dayRows = rows.filter(
+      (row) => row.type === "expense" && row.date === date,
+    );
+    return {
+      day,
+      date,
+      total: dayRows.reduce((sum, row) => sum + cents(row.amount), 0),
+      count: dayRows.length,
+    };
+  });
+  const max = Math.max(0, ...days.map((item) => item.total));
+  const highest =
+    days
+      .filter((item) => item.total > 0)
+      .sort((a, b) => b.total - a.total || a.day - b.day)[0] ?? null;
+  return {
+    days,
+    leadingBlankDays,
+    max,
+    highest,
+    zeroSpendDays: days.filter((item) => item.total === 0).length,
+  };
+}
+
+export type MonthlyReport = {
+  expense: number;
+  income: number;
+  balance: number;
+  expenseChange: number;
+  expensePercent: number | null;
+  topCategory: { name: string; emoji: string; total: number; share: number } | null;
+  topIncrease: CategoryChange | null;
+  topDecrease: CategoryChange | null;
+  highestDay: SpendingCalendarDay | null;
+  zeroSpendDays: number;
+};
+
+export function monthlyReport(rows: Transaction[], month: string): MonthlyReport {
+  const current = summarize(rows, month);
+  const comparison = compareToPreviousMonth(rows, month);
+  const changes = categoryChanges(rows, month);
+  const calendar = spendingCalendar(rows, month);
+  const top = current.groups[0];
+
+  return {
+    expense: current.expense,
+    income: current.income,
+    balance: current.balance,
+    expenseChange: comparison.change,
+    expensePercent: comparison.percent,
+    topCategory: top
+      ? {
+          name: top.name,
+          emoji: top.emoji,
+          total: top.total,
+          share: current.expense
+            ? Math.round((top.total / current.expense) * 100)
+            : 0,
+        }
+      : null,
+    topIncrease: changes
+      .filter((item) => item.change > 0)
+      .sort((a, b) => b.change - a.change)[0] ?? null,
+    topDecrease: changes
+      .filter((item) => item.change < 0)
+      .sort((a, b) => a.change - b.change)[0] ?? null,
+    highestDay: calendar.highest,
+    zeroSpendDays: calendar.zeroSpendDays,
+  };
+}
