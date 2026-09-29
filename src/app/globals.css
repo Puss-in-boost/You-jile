@@ -4859,3 +4859,55 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
     grid-template-columns: 1fr;
   }
 }
+
+
+.yj-trend-labels button {
+  min-width: 0;
+  padding: 4px 2px;
+  border-radius: 7px;
+  background: transparent;
+  color: #a2a29c;
+  font-size: 8px;
+}
+.yj-trend-labels button.active {
+  background: #f0f2ec;
+  color: #4f6249;
+  font-weight: 700;
+}
+.yj-trend-inspector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+.yj-trend-inspector > div {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: #f8f8f5;
+}
+.yj-trend-inspector span {
+  display: block;
+  overflow: hidden;
+  color: #9a9a94;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.yj-trend-inspector strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  color: #3b3b36;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.yj-trend-inspector strong.positive { color: #43825b; }
+.yj-trend-inspector strong.negative { color: #a65d4d; }
+
+@media (max-width: 370px) {
+  .yj-trend-inspector {
+    grid-template-columns: 1fr;
+  }
+}
