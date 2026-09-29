@@ -21,6 +21,7 @@ import { accounts, categories, getDisplayEmoji, getSubcategories } from "@/lib/c
 import {
   upsertUserCategoryRule,
   deleteUserCategoryRule,
+  reclassifyTransactionsToCurrentRules,
   updateUserProfile,
   uploadUserAvatar,
   removeUserAvatar,
@@ -50,6 +51,7 @@ export function Profile({
   const [category, setCategory] = useState("餐饮");
   const [subcategory, setSubcategory] = useState("正餐");
   const [busy, setBusy] = useState(false);
+  const [repairBusy, setRepairBusy] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -73,6 +75,24 @@ export function Profile({
       notify(e instanceof Error ? e.message : "保存失败");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function repairHistoricalCategories() {
+    if (repairBusy || busy) return;
+    setRepairBusy(true);
+    try {
+      const result = await reclassifyTransactionsToCurrentRules();
+      await refresh();
+      notify(
+        result.reclassified
+          ? `已按当前规则重新整理 ${result.reclassified} 笔历史账单`
+          : "历史文本账单已经符合当前规则",
+      );
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "历史分类整理失败");
+    } finally {
+      setRepairBusy(false);
     }
   }
 
@@ -375,9 +395,13 @@ export function Profile({
                     onClick={async () => {
                       setBusy(true);
                       try {
-                        await deleteUserCategoryRule(r.id);
+                        const result = await deleteUserCategoryRule(r.id);
                         await refresh();
-                        notify("分类偏好已移除");
+                        notify(
+                          result.reclassified
+                            ? `分类偏好已移除，${result.reclassified} 笔历史账单已恢复当前规则`
+                            : "分类偏好已移除",
+                        );
                       } catch (e) {
                         notify(e instanceof Error ? e.message : "删除失败");
                       } finally {
@@ -395,6 +419,22 @@ export function Profile({
                 <p>还没有个人规则。试试把一笔账单改成你习惯的分类。</p>
               </div>
             )}
+          </div>
+          <div className="rule-repair">
+            <div>
+              <strong>旧分类没有跟着规则恢复？</strong>
+              <p className="muted">
+                重新检查文本记账，并按“当前个人规则 → 默认分类”整理。手工新增的账单不会被批量改动。
+              </p>
+            </div>
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy || repairBusy}
+              onClick={() => void repairHistoricalCategories()}
+            >
+              {repairBusy ? "整理中…" : "按当前规则重新整理"}
+            </button>
           </div>
         </section>
       </div>

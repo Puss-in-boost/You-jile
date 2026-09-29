@@ -5,6 +5,11 @@ import {
   normalizeCategoryPair,
 } from "./categories";
 import { draftSchema } from "./validation";
+import {
+  classifyWithCurrentRules,
+  dependsOnRule,
+  needsReclassification,
+} from "./rule-reclassification";
 import type { Draft, Transaction, CategoryRule, User } from "@/types";
 
 function requireSupabase() {
@@ -520,16 +525,123 @@ export async function upsertUserCategoryRule(
 
 export async function deleteUserCategoryRule(id: string) {
   if (!hasSupabase) {
-    return request(`/api/rules?id=${id}`, { method: "DELETE" });
+    return request<{ ok: boolean; reclassified: number }>(
+      `/api/rules?id=${id}`,
+      { method: "DELETE" },
+    );
   }
 
   const client = requireSupabase();
   const user = await currentSupabaseUser();
-  const { error } = await client
+
+  const [ruleResult, rulesResult, transactionsResult] = await Promise.all([
+    client
+      .from("user_category_rules")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    client
+      .from("user_category_rules")
+      .select("*")
+      .eq("user_id", user.id),
+    client
+      .from("transactions")
+      .select("*")
+      .eq("user_id", user.id),
+  ]);
+
+  if (ruleResult.error)
+    throwSupabase(ruleResult.error, "读取待删除分类偏好失败");
+  if (rulesResult.error)
+    throwSupabase(rulesResult.error, "读取分类偏好失败");
+  if (transactionsResult.error)
+    throwSupabase(transactionsResult.error, "读取账单失败");
+
+  if (!ruleResult.data) return { ok: true, reclassified: 0 };
+
+  const removedRule = mapRule(ruleResult.data as Record<string, unknown>);
+  const remainingRules = (rulesResult.data ?? [])
+    .filter((row) => String(row.id) !== id)
+    .map((row) => mapRule(row as Record<string, unknown>));
+  const affected = (transactionsResult.data ?? [])
+    .map((row) => mapTransaction(row as Record<string, unknown>))
+    .filter((row) => dependsOnRule(row, removedRule))
+    .map((row) => classifyWithCurrentRules(row, remainingRules));
+
+  const { error: deleteError } = await client
     .from("user_category_rules")
     .delete()
     .eq("id", id)
     .eq("user_id", user.id);
-  if (error) throwSupabase(error, "删除分类偏好失败");
-  return { ok: true };
+  if (deleteError) throwSupabase(deleteError, "删除分类偏好失败");
+
+  for (const next of affected) {
+    const { error: updateError } = await client
+      .from("transactions")
+      .update({
+        type: next.type,
+        category: next.category,
+        subcategory: next.subcategory,
+        emoji: next.emoji,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", next.id)
+      .eq("user_id", user.id);
+    if (updateError)
+      throwSupabase(updateError, "分类偏好已删除，但历史账单回滚失败");
+  }
+
+  return { ok: true, reclassified: affected.length };
+}
+
+export async function reclassifyTransactionsToCurrentRules() {
+  if (!hasSupabase) {
+    return request<{ ok: boolean; reclassified: number }>("/api/rules", {
+      method: "PATCH",
+    });
+  }
+
+  const client = requireSupabase();
+  const user = await currentSupabaseUser();
+  const [rulesResult, transactionsResult] = await Promise.all([
+    client
+      .from("user_category_rules")
+      .select("*")
+      .eq("user_id", user.id),
+    client
+      .from("transactions")
+      .select("*")
+      .eq("user_id", user.id),
+  ]);
+
+  if (rulesResult.error)
+    throwSupabase(rulesResult.error, "读取分类偏好失败");
+  if (transactionsResult.error)
+    throwSupabase(transactionsResult.error, "读取账单失败");
+
+  const currentRules = (rulesResult.data ?? []).map((row) =>
+    mapRule(row as Record<string, unknown>),
+  );
+  const affected = (transactionsResult.data ?? [])
+    .map((row) => mapTransaction(row as Record<string, unknown>))
+    .filter((row) => needsReclassification(row, currentRules))
+    .map((row) => classifyWithCurrentRules(row, currentRules));
+
+  for (const next of affected) {
+    const { error } = await client
+      .from("transactions")
+      .update({
+        type: next.type,
+        category: next.category,
+        subcategory: next.subcategory,
+        emoji: next.emoji,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", next.id)
+      .eq("user_id", user.id);
+    if (error) throwSupabase(error, "重新整理历史分类失败");
+  }
+
+  return { ok: true, reclassified: affected.length };
 }

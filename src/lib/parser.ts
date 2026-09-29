@@ -119,6 +119,39 @@ function incomeSubcategory(title: string) {
   return "";
 }
 
+export function classifyTitle(
+  title: string,
+  rules: CategoryRule[] = [],
+): Pick<
+  ParsedDraft,
+  | "type"
+  | "category"
+  | "subcategory"
+  | "emoji"
+  | "confidence"
+  | "matchSource"
+  | "matchedKeyword"
+> {
+  const match = matchCategory(title, rules);
+  const isIncome = incomeIntent(title) || match.category === "收入";
+  const type = isIncome ? "income" : "expense";
+  const category = isIncome ? "收入" : match.category;
+  const subcategory = isIncome
+    ? (match.category === "收入" ? match.subcategory : "") ||
+      incomeSubcategory(title)
+    : match.subcategory;
+
+  return {
+    type,
+    category,
+    subcategory,
+    emoji: getDisplayEmoji(category, subcategory),
+    confidence: match.confidence,
+    matchSource: match.matchSource,
+    matchedKeyword: match.matchedKeyword,
+  };
+}
+
 export function parseEntry(
   input: string,
   rules: CategoryRule[] = [],
@@ -173,26 +206,14 @@ export function parseEntry(
       .replace(/\s+/g, " ")
       .trim() || "日常记账";
 
-  const match = matchCategory(title, rules);
-  const isIncome = incomeIntent(title) || match.category === "收入";
-  const type = isIncome ? "income" : "expense";
-  const category = isIncome ? "收入" : match.category;
-  const subcategory = isIncome
-    ? (match.category === "收入" ? match.subcategory : "") || incomeSubcategory(title)
-    : match.subcategory;
+  const classification = classifyTitle(title, rules);
 
   return {
-    type,
+    ...classification,
     amount: Number(picked.amount).toFixed(2),
     title,
     date: localDate(date),
     source: "text",
     account,
-    category,
-    subcategory,
-    emoji: getDisplayEmoji(category, subcategory),
-    confidence: match.confidence,
-    matchSource: match.matchSource,
-    matchedKeyword: match.matchedKeyword,
   };
 }
