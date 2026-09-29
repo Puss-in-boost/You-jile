@@ -1,4 +1,4 @@
--- 又寄了 Release Candidate — fresh Supabase schema.
+-- 又寄了 1.3 — fresh Supabase schema.
 -- 一级分类用于统计；subcategory 用于更细的消费分析。
 -- 浏览器只使用 publishable key，RLS 必须保持开启。
 
@@ -7,7 +7,7 @@ create table public.transactions (
  user_id uuid not null references auth.users(id) on delete cascade,
  type text not null check (type in ('expense','income')),
  amount numeric(12,2) not null check (amount > 0),
- category text not null check (category in ('餐饮','交通','娱乐','购物','居住','生活缴费','订阅服务','医疗','学习','旅行','收入','其他')),
+ category text not null check (category in ('餐饮','交通','娱乐','购物','居住','订阅服务','医疗','学习','旅行','收入','其他')),
  subcategory text not null default '',
  emoji text not null,
  title text not null check (char_length(trim(title)) between 1 and 120),
@@ -25,7 +25,7 @@ create table public.user_category_rules (
  user_id uuid not null references auth.users(id) on delete cascade,
  keyword text not null check (char_length(trim(keyword)) between 1 and 120),
  normalized_keyword text not null check (char_length(normalized_keyword) between 1 and 120),
- category text not null check (category in ('餐饮','交通','娱乐','购物','居住','生活缴费','订阅服务','医疗','学习','旅行','收入','其他')),
+ category text not null check (category in ('餐饮','交通','娱乐','购物','居住','订阅服务','医疗','学习','旅行','收入','其他')),
  subcategory text not null default '',
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now()
