@@ -5309,3 +5309,41 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
     font-size: var(--yj-text-sm);
   }
 }
+
+
+/* 1.7.2 Rule rollback */
+.rule-repair {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 14px 15px;
+  border: 1px solid #e8ebe3;
+  border-radius: 14px;
+  background: #f8f9f5;
+}
+.rule-repair > div {
+  min-width: 0;
+}
+.rule-repair strong {
+  display: block;
+  color: #3b4438;
+  font-size: 13px;
+}
+.rule-repair p {
+  margin-top: 5px;
+}
+.rule-repair > button {
+  flex: none;
+  white-space: nowrap;
+}
+@media (max-width: 520px) {
+  .rule-repair {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .rule-repair > button {
+    width: 100%;
+  }
+}
