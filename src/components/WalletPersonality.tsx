@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import {
   jileIndex,
-  spendingArchaeology,
   walletWeather,
 } from "@/lib/personality";
 import { localDate, money } from "@/lib/dates";
@@ -12,18 +11,12 @@ import type { Transaction } from "@/types";
 
 export function WalletPersonality({
   rows,
-  onOpenTransaction,
 }: {
   rows: Transaction[];
-  onOpenTransaction: (row: Transaction) => void;
 }) {
   const today = localDate();
   const weather = walletWeather(rows, today);
   const index = jileIndex(rows, today);
-  const archaeology = spendingArchaeology(rows, today);
-  const archaeologyRow = archaeology.transactionId
-    ? rows.find((row) => row.id === archaeology.transactionId) ?? null
-    : null;
 
   return (
     <section className="yj-personality">
@@ -75,23 +68,7 @@ export function WalletPersonality({
         </article>
       </div>
 
-      <article className="yj-archaeology-card">
-        <div className="yj-archaeology-icon">{archaeology.emoji}</div>
-        <div className="yj-archaeology-copy">
-          <span>{archaeology.label}</span>
-          <strong>{archaeology.title}</strong>
-          <p>{archaeology.detail}</p>
-        </div>
-        {archaeologyRow && (
-          <button
-            type="button"
-            onClick={() => onOpenTransaction(archaeologyRow)}
-            aria-label="打开这笔旧账"
-          >
-            看旧账 <ChevronRight size={14} />
-          </button>
-        )}
-      </article>
+
     </section>
   );
 }
