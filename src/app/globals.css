@@ -4911,3 +4911,257 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
     grid-template-columns: 1fr;
   }
 }
+
+
+/* --------------------------------------------------------------------------
+   1.7 Wallet Personality — weather, Jile index, spending archaeology
+   -------------------------------------------------------------------------- */
+.yj-personality {
+  margin-top: 12px;
+}
+.yj-personality-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+.yj-personality-head > div span {
+  display: block;
+  color: #8b987f;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.yj-personality-head > div strong {
+  display: block;
+  margin-top: 3px;
+  color: #2f2f2b;
+  font-size: 13px;
+}
+.yj-personality-head > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #7d8d74;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.yj-personality-grid {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 9px;
+}
+.yj-personality-weather,
+.yj-personality-index,
+.yj-archaeology-card {
+  border: 1px solid #e8e9e3;
+  background: #fff;
+  box-shadow: 0 7px 22px rgba(48, 55, 45, .035);
+}
+.yj-personality-weather,
+.yj-personality-index {
+  min-width: 0;
+  padding: 15px;
+  border-radius: 18px;
+}
+.yj-personality-weather {
+  background: linear-gradient(155deg, #f7f9f3 0%, #fff 75%);
+}
+.yj-personality-index {
+  background: linear-gradient(155deg, #fff8f3 0%, #fff 76%);
+}
+.yj-personality-card-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.yj-personality-card-label > span {
+  display: grid;
+  place-items: center;
+  width: 37px;
+  height: 37px;
+  flex: none;
+  border-radius: 13px;
+  background: rgba(255,255,255,.78);
+  box-shadow: inset 0 0 0 1px rgba(100,100,90,.05);
+  font-size: 19px;
+}
+.yj-personality-card-label small {
+  display: block;
+  color: #9a9a92;
+  font-size: 8px;
+}
+.yj-personality-card-label strong {
+  display: block;
+  margin-top: 3px;
+  color: #373732;
+  font-size: 11px;
+}
+.yj-personality-weather > p {
+  margin-top: 13px;
+  color: #42473e;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+.yj-personality-weather > small,
+.yj-personality-index > small {
+  display: block;
+  margin-top: 7px;
+  color: #96968f;
+  font-size: 8px;
+  line-height: 1.6;
+}
+.yj-personality-weather-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px solid #eaebe5;
+  color: #7f8779;
+  font-size: 8px;
+}
+
+.yj-index-score {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 14px;
+}
+.yj-index-score strong {
+  color: #815b4a;
+  font-size: 30px;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.yj-index-score span {
+  color: #aaa097;
+  font-size: 8px;
+}
+.yj-index-track {
+  overflow: hidden;
+  height: 7px;
+  margin-top: 9px;
+  border-radius: 999px;
+  background: #f1eae5;
+}
+.yj-index-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #b98b71, #8e5e49);
+  transition: width .24s ease;
+}
+
+.yj-archaeology-card {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  margin-top: 9px;
+  padding: 13px 14px;
+  border-radius: 17px;
+  background: #fbfaf6;
+}
+.yj-archaeology-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  background: #f1eee4;
+  font-size: 18px;
+}
+.yj-archaeology-copy {
+  min-width: 0;
+}
+.yj-archaeology-copy > span {
+  display: block;
+  color: #999186;
+  font-size: 8px;
+}
+.yj-archaeology-copy > strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: #3d3b36;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.yj-archaeology-copy > p {
+  margin-top: 4px;
+  color: #969087;
+  font-size: 8px;
+  line-height: 1.5;
+}
+.yj-archaeology-card > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  background: #f1efe8;
+  color: #776f65;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+@media (hover:hover) and (pointer:fine) {
+  .yj-personality-head > a:hover,
+  .yj-archaeology-card > button:hover {
+    color: #4f6449;
+  }
+}
+
+@media (max-width: 430px) {
+  .yj-personality-grid {
+    grid-template-columns: 1.1fr .9fr;
+    gap: 7px;
+  }
+  .yj-personality-weather,
+  .yj-personality-index {
+    padding: 12px;
+    border-radius: 16px;
+  }
+  .yj-personality-card-label {
+    gap: 7px;
+  }
+  .yj-personality-card-label > span {
+    width: 32px;
+    height: 32px;
+    border-radius: 11px;
+    font-size: 16px;
+  }
+  .yj-personality-weather > p {
+    margin-top: 10px;
+    font-size: 10px;
+  }
+  .yj-index-score strong {
+    font-size: 25px;
+  }
+  .yj-archaeology-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 9px;
+    padding: 11px 12px;
+  }
+  .yj-archaeology-icon {
+    width: 34px;
+    height: 34px;
+  }
+  .yj-archaeology-card > button {
+    grid-column: 2;
+    justify-self: start;
+    padding-left: 0;
+    background: transparent;
+  }
+}
+
+@media (max-width: 350px) {
+  .yj-personality-grid {
+    grid-template-columns: 1fr;
+  }
+}
