@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseEntry } from "../src/lib/parser";
+import { classifyTitle, parseEntry } from "../src/lib/parser";
 import { matchCategory } from "../src/lib/category-matcher";
 import {
   jileIndex,
@@ -20,7 +20,12 @@ import {
   spendingCalendar,
   summarize,
 } from "../src/lib/stats";
-import type { Transaction } from "../src/types";
+import {
+  classifyWithCurrentRules,
+  dependsOnRule,
+  needsReclassification,
+} from "../src/lib/rule-reclassification";
+import type { CategoryRule, Transaction } from "../src/types";
 
 const now = new Date(2026, 4, 18, 12);
 const samples = [
@@ -811,4 +816,86 @@ test("spending archaeology does not fake nostalgia before history is old enough"
   const archaeology = spendingArchaeology(rows, "2026-05-18");
   assert.equal(archaeology.found, false);
   assert.match(archaeology.title, /还不够厚/);
+});
+
+
+test("deleted user rule falls back to the current default classifier", () => {
+  const removedRule: CategoryRule = {
+    id: "rule-1",
+    keyword: "瑞幸",
+    normalizedKeyword: "瑞幸",
+    category: "娱乐",
+    subcategory: "线下娱乐",
+  };
+  const row: Transaction = {
+    id: "tx-1",
+    userId: "u1",
+    type: "expense",
+    amount: "19.00",
+    category: "娱乐",
+    subcategory: "线下娱乐",
+    emoji: "🎯",
+    title: "瑞幸",
+    date: "2026-05-18",
+    source: "text",
+    account: "未指定",
+    createdAt: "2026-05-18T08:00:00.000Z",
+    updatedAt: "2026-05-18T08:00:00.000Z",
+  };
+
+  assert.equal(dependsOnRule(row, removedRule), true);
+  const next = classifyWithCurrentRules(row, []);
+  assert.equal(next.category, "餐饮");
+  assert.equal(next.subcategory, "饮料");
+  assert.equal(next.type, "expense");
+});
+
+test("rule rollback does not touch bills that no longer carry the removed rule result", () => {
+  const removedRule: CategoryRule = {
+    id: "rule-1",
+    keyword: "瑞幸",
+    normalizedKeyword: "瑞幸",
+    category: "娱乐",
+    subcategory: "线下娱乐",
+  };
+  const row: Transaction = {
+    id: "tx-1",
+    userId: "u1",
+    type: "expense",
+    amount: "19.00",
+    category: "餐饮",
+    subcategory: "饮料",
+    emoji: "🥤",
+    title: "瑞幸",
+    date: "2026-05-18",
+    source: "text",
+    account: "未指定",
+    createdAt: "2026-05-18T08:00:00.000Z",
+    updatedAt: "2026-05-18T08:00:00.000Z",
+  };
+
+  assert.equal(dependsOnRule(row, removedRule), false);
+});
+
+test("historical repair only flags text entries that disagree with current rules", () => {
+  const stale: Transaction = {
+    id: "tx-stale",
+    userId: "u1",
+    type: "expense",
+    amount: "19.00",
+    category: "娱乐",
+    subcategory: "线下娱乐",
+    emoji: "🎯",
+    title: "瑞幸",
+    date: "2026-05-18",
+    source: "text",
+    account: "未指定",
+    createdAt: "2026-05-18T08:00:00.000Z",
+    updatedAt: "2026-05-18T08:00:00.000Z",
+  };
+  const manual = { ...stale, id: "tx-manual", source: "manual" as const };
+
+  assert.equal(needsReclassification(stale, []), true);
+  assert.equal(needsReclassification(manual, []), false);
+  assert.equal(classifyTitle(stale.title, []).subcategory, "饮料");
 });
