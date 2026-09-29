@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Repeat2,
   Store,
-  TrendingDown,
   TrendingUp,
   WalletCards,
 } from "lucide-react";
