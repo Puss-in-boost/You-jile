@@ -219,8 +219,9 @@ export function jileIndex(
 
   const spendRatio = todayTotal / baselineDaily;
   const countRatio = baselineCount > 0 ? today.length / baselineCount : 1;
+  const historyDates = new Set(history.dates);
   const historicalAmounts = expenseRows(rows)
-    .filter((row) => row.date < date && history.dates.includes(row.date))
+    .filter((row) => row.date < date && historyDates.has(row.date))
     .map((row) => cents(row.amount))
     .filter((value) => value > 0);
   const typicalTransaction = median(historicalAmounts);
