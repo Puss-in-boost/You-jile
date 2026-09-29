@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
@@ -328,10 +328,6 @@ export function TrendsTab({
     Math.max(0, trend.length - 1),
   );
 
-  useEffect(() => {
-    setSelectedTrendIndex(Math.max(0, trend.length - 1));
-  }, [month, trend.length]);
-
   const selectedTrend =
     trend[selectedTrendIndex] ?? trend[trend.length - 1] ?? null;
 
@@ -578,10 +574,6 @@ export function HabitsTab({
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(
     null,
   );
-
-  useEffect(() => {
-    setSelectedCalendarDay(null);
-  }, [month]);
 
   const selectedDay = selectedCalendarDay
     ? calendar.days.find((item) => item.day === selectedCalendarDay) ?? null

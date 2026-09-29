@@ -14,6 +14,7 @@ import { getSupabase, hasSupabase } from "@/lib/supabase";
 
 let boot: Promise<{ user: User | null; supabase: boolean }> | null = null;
 const CACHE_PREFIX = "you-jile-ledger-cache-v1:";
+const LAST_USER_KEY = "you-jile-ledger-last-user-v1";
 
 type LedgerCache = {
   rows: Transaction[];
@@ -37,10 +38,27 @@ function readCache(userId: string): LedgerCache | null {
   }
 }
 
+function rememberUser(userId: string) {
+  try {
+    window.localStorage.setItem(LAST_USER_KEY, userId);
+  } catch {
+    // Local identity hint is only a startup optimization.
+  }
+}
+
+function readLastUserId() {
+  try {
+    return window.localStorage.getItem(LAST_USER_KEY);
+  } catch {
+    return null;
+  }
+}
+
 function writeCache(userId: string, rows: Transaction[], rules: CategoryRule[]) {
   try {
     const payload: LedgerCache = { rows, rules, savedAt: Date.now() };
     window.localStorage.setItem(cacheKey(userId), JSON.stringify(payload));
+    window.localStorage.setItem(LAST_USER_KEY, userId);
   } catch {
     // Cache is a speed optimization only; quota/privacy settings must never block bookkeeping.
   }
@@ -49,6 +67,9 @@ function writeCache(userId: string, rows: Transaction[], rules: CategoryRule[]) 
 function clearCache(userId?: string) {
   try {
     if (userId) window.localStorage.removeItem(cacheKey(userId));
+    const remembered = window.localStorage.getItem(LAST_USER_KEY);
+    if (!userId || remembered === userId)
+      window.localStorage.removeItem(LAST_USER_KEY);
   } catch {
     // Ignore browser storage failures during logout.
   }
@@ -108,32 +129,41 @@ export function useLedger() {
 
   useEffect(() => {
     let active = true;
+    const restoredUserId = hasSupabase ? readLastUserId() : null;
 
-    // Supabase keeps the current session locally. Use its user id to restore the
-    // last confirmed ledger immediately, while fresh cloud data loads behind it.
-    if (hasSupabase) {
-      void getSupabase()
-        ?.auth.getSession()
-        .then(({ data }) => {
+    // Paint the last confirmed ledger immediately. Session verification and the
+    // fresh cloud fetch continue behind it, so repeat launches feel local-first.
+    const cached = restoredUserId ? readCache(restoredUserId) : null;
+    const cacheTimer = cached
+      ? window.setTimeout(() => {
           if (!active) return;
-          const userId = data.session?.user.id;
-          if (!userId) return;
-          const cached = readCache(userId);
-          if (!cached) return;
           setRows(cached.rows);
           setRules(cached.rules);
           setLoading(false);
-        });
-    }
+        }, 0)
+      : null;
 
     bootstrap()
       .then(async (result) => {
         if (!active) return;
         if (!result.user) {
+          if (restoredUserId) clearCache(restoredUserId);
+          setRows([]);
+          setRules([]);
           window.location.replace("/login");
           return;
         }
+
+        // If another account became active in this browser, never keep showing
+        // the previous user's cached ledger while the new cloud data downloads.
+        if (restoredUserId && restoredUserId !== result.user.id) {
+          const matchingCache = readCache(result.user.id);
+          setRows(matchingCache?.rows ?? []);
+          setRules(matchingCache?.rules ?? []);
+        }
+
         setUser(result.user);
+        rememberUser(result.user.id);
         await refresh();
       })
       .catch((e) => {
@@ -145,6 +175,7 @@ export function useLedger() {
 
     return () => {
       active = false;
+      if (cacheTimer !== null) window.clearTimeout(cacheTimer);
     };
   }, [refresh]);
 

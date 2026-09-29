@@ -5165,3 +5165,147 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
     grid-template-columns: 1fr;
   }
 }
+
+
+/* --------------------------------------------------------------------------
+   1.7.1 Readability — readable by default, compact without microscopic text
+   -------------------------------------------------------------------------- */
+:root {
+  --yj-text-xs: 11px;
+  --yj-text-sm: 12px;
+  --yj-text-base: 14px;
+  --yj-text-md: 15px;
+}
+
+.yj-app {
+  font-size: var(--yj-text-base);
+}
+
+/* Small text is still secondary, but no longer eye-test sized on phones. */
+.yj-app small {
+  font-size: var(--yj-text-xs);
+  line-height: 1.55;
+}
+
+.yj-card-title strong,
+.yj-section-head h2 {
+  font-size: var(--yj-text-md);
+}
+
+.yj-row-copy strong {
+  font-size: var(--yj-text-base);
+}
+.yj-row-copy small {
+  font-size: var(--yj-text-xs);
+}
+
+.yj-bottom-nav a,
+.yj-bottom-nav > button,
+.yj-insights-tabs button,
+.yj-month-current,
+.yj-text-link {
+  font-size: var(--yj-text-xs);
+}
+
+.yj-wallet-voice span,
+.yj-personality-head > div span,
+.yj-personality-head > a,
+.yj-personality-card-label small,
+.yj-personality-weather-meta,
+.yj-index-score span,
+.yj-archaeology-copy > span,
+.yj-archaeology-card > button {
+  font-size: var(--yj-text-xs);
+}
+
+.yj-wallet-voice p,
+.yj-personality-weather > p,
+.yj-personality-weather > small,
+.yj-personality-index > small,
+.yj-archaeology-copy > p {
+  font-size: var(--yj-text-sm);
+}
+
+.yj-personality-card-label strong,
+.yj-archaeology-copy > strong {
+  font-size: var(--yj-text-base);
+}
+
+.yj-overview-structure strong,
+.yj-overview-signals strong,
+.yj-merchant-copy strong,
+.yj-recurring-tail strong,
+.yj-anomaly-row > div strong,
+.yj-anomaly-row > strong {
+  font-size: var(--yj-text-sm);
+}
+
+.yj-overview-structure small,
+.yj-overview-signals span,
+.yj-overview-signals small,
+.yj-merchant-copy small,
+.yj-anomaly-row > div small,
+.yj-pattern-summary > span,
+.yj-pattern-summary > small {
+  font-size: var(--yj-text-xs);
+}
+
+.yj-recurring-tail span {
+  font-size: 10px;
+}
+
+.yj-composition-legend,
+.yj-composition-row > span,
+.yj-trend-labels button,
+.yj-trend-inspector span,
+.yj-calendar-weekdays,
+.yj-calendar-detail small,
+.yj-change-row small,
+.yj-trend-summary small,
+.yj-report-pulse > span,
+.yj-report-pulse > small {
+  font-size: var(--yj-text-xs);
+}
+
+.yj-trend-inspector strong,
+.yj-calendar-day,
+.yj-merchant-rank {
+  font-size: var(--yj-text-sm);
+}
+
+.yj-overview-stat-grid .yj-stat span {
+  font-size: var(--yj-text-xs);
+}
+
+.yj-quick-tools button,
+.yj-compare-grid span,
+.yj-backfill-day-summary > div span,
+.yj-backfill-section-title small,
+.yj-backfill-batch-head,
+.yj-backfill-batch-list > div > span,
+.yj-backfill-batch-list > div small,
+.yj-backfill-footer {
+  font-size: var(--yj-text-xs);
+}
+
+.yj-quick-tools button em {
+  font-size: 10px;
+}
+
+@media (max-width: 430px) {
+  body {
+    font-size: var(--yj-text-base);
+  }
+
+  .yj-overview-stat-grid .yj-stat span {
+    font-size: var(--yj-text-xs);
+  }
+
+  .yj-overview-stat-grid .yj-stat strong {
+    font-size: 15px;
+  }
+
+  .yj-personality-weather > p {
+    font-size: var(--yj-text-sm);
+  }
+}

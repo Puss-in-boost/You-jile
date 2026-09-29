@@ -96,10 +96,20 @@ export function BackfillMode({
 
   useEffect(() => {
     const remembered = window.localStorage.getItem(STORAGE_KEY);
-    if (remembered && /^\d{4}-\d{2}-\d{2}$/.test(remembered) && remembered <= today) {
-      setSelectedDate(remembered);
-    }
-    window.setTimeout(() => singleRef.current?.focus(), 80);
+    const restoreTimer = window.setTimeout(() => {
+      if (
+        remembered &&
+        /^\d{4}-\d{2}-\d{2}$/.test(remembered) &&
+        remembered <= today
+      ) {
+        setSelectedDate(remembered);
+      }
+    }, 0);
+    const focusTimer = window.setTimeout(() => singleRef.current?.focus(), 80);
+    return () => {
+      window.clearTimeout(restoreTimer);
+      window.clearTimeout(focusTimer);
+    };
   }, [today]);
 
   useEffect(() => {
