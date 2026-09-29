@@ -77,6 +77,13 @@ function builtInCandidates(): Candidate[] {
 }
 
 const candidates = builtInCandidates();
+const genericFallbackSubcategories = new Set(["其他购物", "其他订阅", "其他支出"]);
+
+function specificity(candidate: Candidate) {
+  if (genericFallbackSubcategories.has(candidate.subcategory)) return 0;
+  if (candidate.subcategory) return 2;
+  return 1;
+}
 
 export function matchCategory(
   input: string,
@@ -96,7 +103,13 @@ export function matchCategory(
     };
   }
 
-  const found = candidates.find((c) => text.includes(c.word));
+  const found = candidates
+    .filter((c) => text.includes(c.word))
+    .sort(
+      (a, b) =>
+        specificity(b) - specificity(a) ||
+        b.word.length - a.word.length,
+    )[0];
   if (found)
     return {
       category: found.category,
@@ -114,6 +127,7 @@ export function matchCategory(
     matchedKeyword: "",
   };
   for (const candidate of candidates) {
+    if (genericFallbackSubcategories.has(candidate.subcategory)) continue;
     const key = candidate.word;
     if (key.length < 3 || text.length < 2) continue;
     const score = 1 - distance(text, key) / Math.max(text.length, key.length);
