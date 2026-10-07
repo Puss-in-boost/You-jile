@@ -426,7 +426,7 @@ export function Profile({
             <div>
               <strong>旧分类没有跟着规则恢复？</strong>
               <p className="muted">
-                重新检查文本记账，并按“当前个人规则 → 默认分类”整理。手工新增的账单不会被批量改动。
+                仅整理文本账单的消费分类，保留已记录的收入/支出类型、金额和日期。手工新增的账单不会被批量改动。
               </p>
             </div>
             <button
