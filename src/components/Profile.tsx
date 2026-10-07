@@ -191,7 +191,7 @@ export function Profile({
   }
 
   function exportCSV() {
-    const header = ["日期", "类型", "金额", "一级分类", "细分类", "标题", "账户"];
+    const header = ["日期", "类型", "金额", "一级分类", "细分类", "商品细分", "商家", "标题", "账户"];
     const escape = (s: string) =>
       `"${(/^[=+\-@\t\r]/.test(s) ? "'" : "") + s.replace(/"/g, '""')}"`;
     const csv =
@@ -204,6 +204,8 @@ export function Profile({
           t.amount,
           t.category,
           t.subcategory || "",
+          t.detail || "",
+          t.merchant || "",
           t.title,
           t.account,
         ]),

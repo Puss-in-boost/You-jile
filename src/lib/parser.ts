@@ -1,5 +1,6 @@
 import { getDisplayEmoji, normalize } from "./categories";
 import { matchCategory } from "./category-matcher";
+import { detectMerchant, detectDetail } from "./purchase-dimensions";
 import { localDate } from "./dates";
 import type { CategoryRule, ParsedDraft } from "@/types";
 
@@ -210,6 +211,8 @@ export function parseEntry(
 
   return {
     ...classification,
+    merchant: detectMerchant(title),
+    detail: detectDetail(title, classification.subcategory),
     amount: Number(picked.amount).toFixed(2),
     title,
     date: localDate(date),

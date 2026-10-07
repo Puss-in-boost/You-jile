@@ -10,6 +10,8 @@ export interface Draft {
   date: string;
   source: Source;
   account: string;
+  merchant?: string;
+  detail?: string;
 }
 export interface Transaction extends Draft {
   id: string;

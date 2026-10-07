@@ -94,7 +94,7 @@ export function CategoryDrilldown({
   const merchants = drill.subcategory
     ? groupRows(
         selectedRows,
-        (row) => row.title || drill.subcategory || drill.category,
+        (row) => row.merchant?.trim() || row.title || drill.subcategory || drill.category,
       )
     : [];
   const sortedRows = [...selectedRows].sort(
@@ -204,7 +204,7 @@ export function CategoryDrilldown({
               <div className="yj-card-title">
                 <div>
                   <strong>花在了哪里</strong>
-                  <small>按你记账时填写的标题 / 商家汇总</small>
+                  <small>优先按商家汇总，未填写商家时使用标题</small>
                 </div>
               </div>
               <div className="yj-category-bars">

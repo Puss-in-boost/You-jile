@@ -5493,3 +5493,11 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
     white-space: normal;
   }
 }
+
+.purchase-cross { margin: 20px 0; padding: 22px; border-radius: 20px; background: var(--card, #fff); color: #35433b; }
+.purchase-cross p { color: #67756c; font-size: 13px; line-height: 1.7; }
+.purchase-cross-table { overflow-x: auto; }
+.purchase-cross table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.purchase-cross th, .purchase-cross td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e6ebe7; }
+.purchase-cross button { cursor: pointer; color: inherit; }
+.purchase-cross-row { display: block; width: 100%; padding: 12px; margin-top: 8px; text-align: left; }

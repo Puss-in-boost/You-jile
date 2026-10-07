@@ -62,7 +62,7 @@ export function TransactionList({
                 <span className="transaction-description">
                   <strong>{t.title}</strong>
                   <span>
-                    {t.category}
+                    {[t.category, t.subcategory, t.detail, t.merchant].filter(Boolean).join(" · ")}
                     <i /> {t.account}
                     {!compact && (
                       <>

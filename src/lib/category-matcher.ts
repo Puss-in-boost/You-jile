@@ -3,6 +3,7 @@ import {
   normalize,
   normalizeCategoryPair,
 } from "./categories";
+import { isMerchantKeyword, detectDetail } from "./purchase-dimensions";
 import type { CategoryRule, ParsedDraft } from "@/types";
 
 type Match = Pick<
@@ -75,9 +76,9 @@ function builtInCandidates(): Candidate[] {
   }
   return list.sort((a, b) => {
     const aMarketplaceChannel =
-      a.category === "购物" && a.subcategory === "其他购物";
+      isMerchantKeyword(a.word) || (a.category === "购物" && a.subcategory === "其他购物");
     const bMarketplaceChannel =
-      b.category === "购物" && b.subcategory === "其他购物";
+      isMerchantKeyword(b.word) || (b.category === "购物" && b.subcategory === "其他购物");
 
     // Marketplace names describe where something was bought, not what it was.
     // When a concrete item/category keyword is also present, let the object win.
@@ -95,9 +96,12 @@ export function matchCategory(
   rules: CategoryRule[] = [],
 ): Match {
   const text = normalize(input);
+  const product = candidates.find((c) => !isMerchantKeyword(c.word) && text.includes(c.word));
+  const groceryDetail = detectDetail(input, "生鲜买菜");
   const rule = [...rules]
     .sort((a, b) => b.normalizedKeyword.length - a.normalizedKeyword.length)
-    .find((r) => text.includes(r.normalizedKeyword));
+    .find((r) => r.normalizedKeyword && text.includes(r.normalizedKeyword) &&
+      (!isMerchantKeyword(r.normalizedKeyword) || (!product && !groceryDetail)));
   if (rule) {
     const pair = normalizeCategoryPair(rule.category, rule.subcategory);
     return {
@@ -108,6 +112,9 @@ export function matchCategory(
     };
   }
 
+  if (groceryDetail && (!product || product.subcategory === "生鲜买菜" || product.word === "水果" || product.word === "蔬菜")) {
+    return { category: "餐饮", subcategory: "生鲜买菜", confidence: 0.98, matchSource: "exact", matchedKeyword: groceryDetail };
+  }
   const found = candidates.find((c) => text.includes(c.word));
   if (found)
     return {

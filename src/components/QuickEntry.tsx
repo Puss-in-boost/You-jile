@@ -80,7 +80,7 @@ export function QuickEntry({
               {parsed.emoji} {parsed.title}
             </span>
             <strong>¥{parsed.amount}</strong>
-            <span>{parsed.category}</span>
+            <span>{[parsed.category, parsed.subcategory, parsed.detail, parsed.merchant].filter(Boolean).join(" / ")}</span>
             <span>
               <CalendarDays size={12} /> {parsed.date.slice(5)}
             </span>

@@ -9,6 +9,8 @@ create table public.transactions (
  amount numeric(12,2) not null check (amount > 0),
  category text not null check (category in ('餐饮','交通','娱乐','购物','居住','订阅服务','医疗','学习','旅行','收入','其他')),
  subcategory text not null default '',
+ merchant text not null default '',
+ detail text not null default '',
  emoji text not null,
  title text not null check (char_length(trim(title)) between 1 and 120),
  transaction_date date not null,

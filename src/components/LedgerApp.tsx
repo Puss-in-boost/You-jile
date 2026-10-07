@@ -87,7 +87,7 @@ function LedgerRow({
         <span className="yj-row-copy">
           <strong>{row.title}</strong>
           <small>
-            {row.category}{row.subcategory ? ` / ${row.subcategory}` : ""} · {dateLabel(row.date)}
+            {[row.category, row.subcategory, row.detail, row.merchant].filter(Boolean).join(" / ")} · {dateLabel(row.date)}
             {row.account && !["未指定", "其他"].includes(row.account) ? ` · ${row.account}` : ""}
           </small>
         </span>
@@ -163,7 +163,7 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
       (type === "all" || row.type === type) &&
       (categoryFilter === "all" || row.category === categoryFilter) &&
       (accountFilter === "all" || row.account === accountFilter) &&
-      `${row.title} ${row.category} ${row.subcategory} ${row.account} ${row.amount}`
+      `${row.title} ${row.category} ${row.subcategory} ${row.detail ?? ""} ${row.merchant ?? ""} ${row.account} ${row.amount}`
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
@@ -269,7 +269,7 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
                       <Check size={13} />
                       <span>
                         {quickDraft.emoji} {quickDraft.type === "expense" ? "−" : "+"}¥
-                        {quickDraft.amount} · {quickDraft.category}{quickDraft.subcategory ? ` / ${quickDraft.subcategory}` : ""} · {dateLabel(quickDraft.date)}
+                        {quickDraft.amount} · {[quickDraft.category, quickDraft.subcategory, quickDraft.detail, quickDraft.merchant].filter(Boolean).join(" / ")} · {dateLabel(quickDraft.date)}
                         {quickDraft.account !== "未指定" ? ` · ${quickDraft.account}` : ""}
                       </span>
                       <em>{quickDraft.matchSource === "user_rule" ? "按你的习惯" : "预览"}</em>
