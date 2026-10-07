@@ -10,6 +10,8 @@ export const draftSchema = z
       .refine((v) => Number(v) > 0 && Number(v) <= 9999999999.99),
     category: z.string().refine((v) => categories.some((c) => c.name === v)),
     subcategory: z.string().max(60).default(""),
+    merchant: z.string().trim().max(60).default(""),
+    detail: z.string().trim().max(60).default(""),
     title: z.string().trim().min(1).max(120),
     date: z.iso.date(),
     source: z.enum(["manual", "text", "voice", "photo"]),

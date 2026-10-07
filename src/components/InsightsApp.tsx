@@ -11,6 +11,7 @@ import {
   Plus,
   ReceiptText,
 } from "lucide-react";
+import { PurchaseCross } from "./insights/PurchaseCross";
 import { EntryModal } from "./EntryModal";
 import { usePWA } from "./InstallPrompt";
 import { useLedger } from "@/hooks/use-ledger";
@@ -213,6 +214,8 @@ export function InsightsApp() {
             onEdit={openEdit}
           />
         )}
+
+        {tab === "habits" && <PurchaseCross key={month} rows={ledger.rows} month={month} onEdit={openEdit} />}
 
         {ledger.toast && <div className="yj-toast">{ledger.toast}</div>}
       </div>

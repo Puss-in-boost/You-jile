@@ -37,6 +37,8 @@ export const transactions = pgTable(
     category: text("category").notNull(),
     subcategory: text("subcategory").notNull().default(""),
     emoji: text("emoji").notNull(),
+    merchant: text("merchant").notNull().default(""),
+    detail: text("detail").notNull().default(""),
     title: text("title").notNull(),
     date: date("transaction_date").notNull(),
     source: text("source").notNull().default("manual"),

@@ -8,6 +8,7 @@ import {
   getDisplayEmoji,
   getSubcategories,
 } from "@/lib/categories";
+import { detailOptions, detectMerchant } from "@/lib/purchase-dimensions";
 import { localDate } from "@/lib/dates";
 import type { Draft, Transaction } from "@/types";
 
@@ -47,6 +48,8 @@ export function EntryModal({
           category: initial.category,
           subcategory: initial.subcategory,
           emoji: initial.emoji,
+          merchant: initial.merchant ?? detectMerchant(initial.title),
+          detail: initial.detail ?? "",
           title: initial.title,
           date: initial.date,
           source: initial.source,
@@ -115,6 +118,7 @@ export function EntryModal({
     setForm((f) => ({
       ...f,
       category,
+      detail: "",
       subcategory: options[0]?.name ?? "",
       emoji: getDisplayEmoji(category, options[0]?.name ?? ""),
     }));
@@ -184,6 +188,7 @@ export function EntryModal({
                   setForm((f) => ({
                     ...f,
                     type,
+                    detail: "",
                     category: type === "income" ? "收入" : "餐饮",
                     subcategory: type === "income" ? "" : "正餐",
                     emoji: type === "income" ? "💰" : "🍜",
@@ -248,6 +253,7 @@ export function EntryModal({
                   setForm((f) => ({
                     ...f,
                     subcategory,
+                    detail: "",
                     emoji: getDisplayEmoji(f.category, subcategory),
                   }));
                 }}
@@ -260,6 +266,22 @@ export function EntryModal({
               </select>
             </label>
           )}
+
+          <label className="field-label">
+            商品细分 <em className="optional-mark">可选</em>
+            <input maxLength={60} list="purchase-details" value={form.detail ?? ""}
+              placeholder="例如水果、调味料、肉蛋奶、威士忌，也可自定义"
+              onChange={(e) => field("detail", e.target.value)} />
+            <datalist id="purchase-details">
+              {(detailOptions[form.subcategory] ?? []).map((value) => <option key={value} value={value} />)}
+            </datalist>
+          </label>
+          <label className="field-label">
+            商家 / 购买渠道 <em className="optional-mark">可选</em>
+            <input maxLength={60} value={form.merchant ?? ""} placeholder="例如盒马、山姆、淘宝"
+              onChange={(e) => field("merchant", e.target.value)} />
+          </label>
+          <p className="learning-note">商家与分类独立：盒马可以买水果，也可以买酒水。混合订单可按各类实际金额分别记账。</p>
 
           <label className="field-label">
             标题 / 备注 <em className="optional-mark">可选</em>

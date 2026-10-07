@@ -334,7 +334,7 @@ export function merchantStats(
   rows
     .filter((row) => row.type === "expense" && row.date.startsWith(month))
     .forEach((row) => {
-      const key = merchantKey(row.title);
+      const key = merchantKey(row.merchant?.trim() || row.title);
       if (!key) return;
       const current = map.get(key);
       if (current) {
@@ -344,7 +344,7 @@ export function merchantStats(
       } else {
         const pair = normalizeCategoryPair(row.category, row.subcategory);
         map.set(key, {
-          title: row.title.trim() || "未命名",
+          title: row.merchant?.trim() || row.title.trim() || "未命名",
           category: pair.category,
           subcategory: pair.subcategory,
           emoji: row.emoji,
