@@ -1,5 +1,5 @@
 import type { CategoryRule, Transaction } from "@/types";
-import { normalize, normalizeCategoryPair } from "./categories";
+import { getDisplayEmoji, normalize, normalizeCategoryPair } from "./categories";
 import { classifyTitle } from "./parser";
 
 export type Reclassification = {
@@ -40,16 +40,20 @@ export function dependsOnRule(
 }
 
 export function classifyWithCurrentRules(
-  row: Pick<Transaction, "id" | "title">,
+  row: Pick<Transaction, "id" | "title" | "type" | "category" | "subcategory">,
   rules: CategoryRule[],
 ): Reclassification {
   const next = classifyTitle(row.title, rules);
+  // A category repair must never reinterpret money direction from the title.
+  // Keep the original pair when the classifier crosses income/expense boundaries.
+  const pair = next.type === row.type
+    ? normalizeCategoryPair(next.category, next.subcategory)
+    : normalizeCategoryPair(row.category, row.subcategory);
   return {
     id: row.id,
-    type: next.type,
-    category: next.category,
-    subcategory: next.subcategory,
-    emoji: next.emoji,
+    type: row.type,
+    ...pair,
+    emoji: getDisplayEmoji(pair.category, pair.subcategory),
   };
 }
 

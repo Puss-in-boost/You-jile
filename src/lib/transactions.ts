@@ -4,6 +4,7 @@ import {
   normalize,
   normalizeCategoryPair,
 } from "./categories";
+import { readAllPages } from "./pagination";
 import { draftSchema } from "./validation";
 import {
   classifyWithCurrentRules,
@@ -145,6 +146,17 @@ export async function request<T>(
   return data as T;
 }
 
+async function readUserRows(table: "transactions" | "user_category_rules", userId: string) {
+  const client = requireSupabase();
+  const data = await readAllPages(async (from, to) => {
+    const result = await client.from(table).select("*").eq("user_id", userId)
+      .order("id", { ascending: true }).range(from, to);
+    if (result.error) throwSupabase(result.error, "读取历史账单或分类规则失败");
+    return result.data ?? [];
+  });
+  return { data, error: null };
+}
+
 export async function getTransactions(): Promise<{
   transactions: Transaction[];
   rules: CategoryRule[];
@@ -155,20 +167,10 @@ export async function getTransactions(): Promise<{
     );
   }
 
-  const client = requireSupabase();
   const user = await currentSupabaseUser();
   const [transactionsResult, rulesResult] = await Promise.all([
-    client
-      .from("transactions")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false }),
-    client
-      .from("user_category_rules")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false }),
+    readUserRows("transactions", user.id),
+    readUserRows("user_category_rules", user.id),
   ]);
 
   if (transactionsResult.error)
@@ -178,7 +180,7 @@ export async function getTransactions(): Promise<{
   return {
     transactions: (transactionsResult.data ?? []).map((row) =>
       mapTransaction(row as Record<string, unknown>),
-    ),
+    ).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)),
     rules: (rulesResult.data ?? []).map((row) =>
       mapRule(row as Record<string, unknown>),
     ),
@@ -551,14 +553,8 @@ export async function deleteUserCategoryRule(id: string) {
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle(),
-    client
-      .from("user_category_rules")
-      .select("*")
-      .eq("user_id", user.id),
-    client
-      .from("transactions")
-      .select("*")
-      .eq("user_id", user.id),
+    readUserRows("user_category_rules", user.id),
+    readUserRows("transactions", user.id),
   ]);
 
   if (ruleResult.error)
@@ -615,14 +611,8 @@ export async function reclassifyTransactionsToCurrentRules() {
   const client = requireSupabase();
   const user = await currentSupabaseUser();
   const [rulesResult, transactionsResult] = await Promise.all([
-    client
-      .from("user_category_rules")
-      .select("*")
-      .eq("user_id", user.id),
-    client
-      .from("transactions")
-      .select("*")
-      .eq("user_id", user.id),
+    readUserRows("user_category_rules", user.id),
+    readUserRows("transactions", user.id),
   ]);
 
   if (rulesResult.error)
