@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { X, ImagePlus } from "lucide-react";
 import { accounts, categories, getDisplayEmoji, getSubcategories } from "@/lib/categories";
 import { extractPhotoTransaction, photoDuplicateCandidates } from "@/lib/photo-ocr";
-import { localDate } from "@/lib/dates";
 import type { CategoryRule, Draft, Transaction } from "@/types";
 
 type Props = {
