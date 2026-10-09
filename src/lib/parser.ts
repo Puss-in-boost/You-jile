@@ -86,6 +86,41 @@ function removeSlice(text: string, start: number, end: number) {
   return `${text.slice(0, start)} ${text.slice(end)}`;
 }
 
+/**
+ * Recognize unambiguous calendar dates before money extraction, so 2026-10-05
+ * is not mistaken for a negative amount and month/day digits are not counted.
+ * A missing year means the current calendar year (never guess a rollover).
+ */
+function extractCalendarDate(text: string, now: Date): { date: Date; text: string } | null {
+  const patterns: Array<{ pattern: RegExp; hasYear: boolean }> = [
+    { pattern: /(?<!\d)(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*(?:日|号)?(?!\d)/, hasYear: true },
+    { pattern: /(?<!\d)(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)/, hasYear: true },
+    { pattern: /(?<!\d)(\d{1,2})\s*月\s*(\d{1,2})\s*(?:日|号)?(?!\d)/, hasYear: false },
+    { pattern: /(?<!\d)(\d{1,2})\/(\d{1,2})(?![\/\d])/, hasYear: false },
+  ];
+
+  for (const { pattern, hasYear } of patterns) {
+    const match = pattern.exec(text);
+    if (!match || match.index === undefined) continue;
+    const year = hasYear ? Number(match[1]) : now.getFullYear();
+    const month = Number(match[hasYear ? 2 : 1]);
+    const day = Number(match[hasYear ? 3 : 2]);
+    const date = new Date(year, month - 1, day, 12);
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() + 1 !== month ||
+      date.getDate() !== day
+    ) {
+      throw new Error("日期无效，请检查年月日（例如“2026年10月5日”）");
+    }
+    return {
+      date,
+      text: removeSlice(text, match.index, match.index + match[0].length),
+    };
+  }
+  return null;
+}
+
 function incomeIntent(title: string) {
   const normalized = title.normalize("NFKC").toLowerCase();
 
@@ -167,16 +202,18 @@ export function parseEntry(
     .replace(/￥/g, "¥")
     .replace(/\s+/g, " ");
 
-  const date = new Date(now);
-  if (/上个月/.test(text)) {
+  const explicitDate = extractCalendarDate(text, now);
+  const date = explicitDate?.date ?? new Date(now);
+  if (explicitDate) text = explicitDate.text;
+  if (!explicitDate && /上个月/.test(text)) {
     const day = date.getDate();
     date.setDate(1);
     date.setMonth(date.getMonth() - 1);
     const last = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
     date.setDate(Math.min(day, last));
-  } else if (/前天/.test(text)) date.setDate(date.getDate() - 2);
-  else if (/昨天|昨晚/.test(text)) date.setDate(date.getDate() - 1);
-  else if (/上周/.test(text)) date.setDate(date.getDate() - 7);
+  } else if (!explicitDate && /前天/.test(text)) date.setDate(date.getDate() - 2);
+  else if (!explicitDate && /昨天|昨晚/.test(text)) date.setDate(date.getDate() - 1);
+  else if (!explicitDate && /上周/.test(text)) date.setDate(date.getDate() - 7);
   text = text.replace(
     /上个月|本月|前天|昨天|昨晚|今天早上|今天中午|今天|今晚|上周/g,
     " ",
