@@ -22,6 +22,7 @@ export function PhotoImport({ rows, rules, busy, offline, onClose, onSave }: Pro
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -87,12 +88,13 @@ export function PhotoImport({ rows, rules, busy, offline, onClose, onSave }: Pro
     && Boolean(draft.category)
     && (draft.type === "expense" || draft.category === "收入")
     && (draft.type === "income" || draft.category !== "收入");
-  const disabled = running || busy || offline || lock.current;
+  const disabled = running || busy || offline || saving;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!draft || !valid || !confirmed || disabled || (duplicates.length && !allowDuplicate)) return;
     lock.current = true;
+    setSaving(true);
     setError("");
     try {
       const result = await onSave({
@@ -106,6 +108,7 @@ export function PhotoImport({ rows, rules, busy, offline, onClose, onSave }: Pro
       setError(e instanceof Error ? e.message : "保存失败，请重试");
     } finally {
       lock.current = false;
+      if (!closed.current) setSaving(false);
     }
   }
 
