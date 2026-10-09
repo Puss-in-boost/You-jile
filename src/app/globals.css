@@ -5501,3 +5501,18 @@ button:not(.primary):not(.transaction-row):not(.discovery-card):not(
 .purchase-cross th, .purchase-cross td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e6ebe7; }
 .purchase-cross button { cursor: pointer; color: inherit; }
 .purchase-cross-row { display: block; width: 100%; padding: 12px; margin-top: 8px; text-align: left; }
+
+/* Local single-screenshot import: limited height and usable on mobile. */
+.yj-photo-import { max-height: min(92vh, 900px); overflow-y: auto; }
+.yj-photo-import .field-label { display: block; margin: 12px 0; }
+.yj-photo-import .field-label > input,
+.yj-photo-import .field-label > select { display: block; width: 100%; margin-top: 6px; border: 1px solid #d6d9d3; border-radius: 9px; padding: 10px; background: #fff; color: #28342b; font: inherit; }
+.yj-photo-picker { display: flex; align-items: center; gap: 10px; justify-content: center; cursor: pointer; position: relative; border: 1px dashed #8ba58f; border-radius: 12px; padding: 13px; margin: 14px 0; font-weight: 600; }
+.yj-photo-picker input { position: absolute; opacity: 0; inset: 0; width: 100%; cursor: pointer; }
+.yj-photo-preview-image { display: block; max-width: 100%; max-height: 240px; margin: 10px auto; object-fit: contain; border-radius: 9px; }
+.yj-photo-raw { margin: 12px 0; font-size: 12px; }
+.yj-photo-raw pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow-y: auto; padding: 8px; background: #f5f7f4; }
+.yj-photo-warning { margin: 12px 0; padding: 12px; border-radius: 10px; background: #fff5e5; color: #6c471d; font-size: 12px; }
+.yj-photo-warning p { margin: 7px 0; }
+.yj-photo-check { display: flex; align-items: flex-start; gap: 9px; margin: 12px 0; font-size: 13px; line-height: 1.5; }
+.yj-photo-check input { width: 17px; height: 17px; flex: none; }
