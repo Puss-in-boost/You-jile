@@ -24,7 +24,7 @@ function loadEngine(): Promise<OCRLibrary> {
   const global = window as OCRWindow;
   if (global.Tesseract) return Promise.resolve(global.Tesseract);
   if (loader) return loader;
-  loader = new Promise((resolve, reject) => {
+  loader = new Promise<OCRLibrary>((resolve, reject) => {
     const script = document.createElement("script");
     script.async = true;
     script.src = ENGINE;
@@ -41,7 +41,7 @@ function loadEngine(): Promise<OCRLibrary> {
     loader = null;
     throw error;
   });
-  return loader;
+  return loader!;
 }
 
 export async function recognizePaymentScreenshot(file: File, onProgress: (message: string) => void): Promise<string> {
