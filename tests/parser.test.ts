@@ -1022,6 +1022,7 @@ test("parser keeps classification provenance for explanation UI", () => {
 });
 
 test("explicit calendar dates are parsed before amounts and removed from titles", () => {
+  const calendarNow = new Date(2026, 9, 9, 12);
   const cases: Array<[string, string, string, string]> = [
     ["10月5日 盒马 20", "2026-10-05", "20.00", "盒马"],
     ["10月5日盒马20", "2026-10-05", "20.00", "盒马"],
@@ -1036,25 +1037,26 @@ test("explicit calendar dates are parsed before amounts and removed from titles"
     ["昨天 10月5日 盒马 20", "2026-10-05", "20.00", "盒马"],
   ];
   for (const [input, date, amount, title] of cases) {
-    const result = parseEntry(input, [], now);
+    const result = parseEntry(input, [], calendarNow);
     assert.equal(result.date, date, input);
     assert.equal(result.amount, amount, input);
     assert.equal(result.title, title, input);
   }
-  const bill = parseEntry("10月5日 盒马 20", [], now);
+  const bill = parseEntry("10月5日 盒马 20", [], calendarNow);
   assert.equal(bill.merchant, "盒马");
   assert.equal(bill.type, "expense");
-  assert.equal(parseEntry("2026年9月15日 工资 900", [], now).type, "income");
+  assert.equal(parseEntry("2026年9月15日 工资 900", [], calendarNow).type, "income");
 });
 
 test("invalid calendar dates fail rather than silently recording today", () => {
+  const calendarNow = new Date(2026, 9, 9, 12);
   for (const input of [
     "2月29日 盒马 20",
     "2026-02-30 盒马 20",
     "2026年13月1日 盒马 20",
     "9/31 盒马 20",
-  ]) assert.throws(() => parseEntry(input, [], now), /日期无效/, input);
-  assert.equal(parseEntry("昨天 盒马 20", [], now).date, "2026-05-17");
-  assert.throws(() => parseEntry("2026-10-05 盒马 -20", [], now), /金额必须大于 0/);
+  ]) assert.throws(() => parseEntry(input, [], calendarNow), /日期无效/, input);
+  assert.equal(parseEntry("昨天 盒马 20", [], calendarNow).date, "2026-10-08");
+  assert.throws(() => parseEntry("2026-10-05 盒马 -20", [], calendarNow), /金额必须大于 0/);
 });
 
