@@ -49,3 +49,18 @@ test("same day amount and direction are suspected, not auto-saved or auto-droppe
   assert.deepEqual(photoDuplicateCandidates(draft, rows).map((row) => row.id), ["1"]);
   assert.deepEqual(photoDuplicateCandidates({...draft, amount:""},rows), []);
 });
+
+
+test("compact English payment screenshot accepts a unique bare decimal and recognized merchant", () => {
+  const r = extractPhotoTransaction("拼多多\nPaid by Balance\n25.74\nTransaction Details", [], now);
+  assert.equal(r.draft.amount, "25.74");
+  assert.equal(r.draft.merchant, "拼多多");
+  assert.equal(r.draft.category, "购物");
+  assert.equal(r.draft.date, "");
+  assert.ok(r.warnings.some((w) => w.includes("日期")));
+});
+test("bare numbers are never accepted from untrusted or conflicting screenshots", () => {
+  assert.equal(extractPhotoTransaction("25.74\nTransaction Details", [], now).draft.amount, "");
+  assert.equal(extractPhotoTransaction("Paid by Balance\n25.74\n26.12", [], now).draft.amount, "");
+  assert.equal(extractPhotoTransaction("支付成功\n余额 80.00\n优惠 10.00", [], now).draft.amount, "");
+});
