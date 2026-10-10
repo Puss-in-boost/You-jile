@@ -108,11 +108,19 @@ function scanDate(input: string, now: Date): string {
 
 function labeledText(lines: string[], labels: RegExp): string {
   for (let i = 0; i < lines.length; i++) {
-    const matched = labels.exec(lines[i]);
+    const source = lines[i];
+    if (/^(?:商家)?区域识别\\d*[：:]?$/.test(source)) continue;
+    const matched = labels.exec(source);
     if (!matched) continue;
-    const rest = lines[i].slice(matched[0].length).replace(/^[：:\s]+/, "").trim();
+    // Regexes for field labels also accept spaces in OCR output, but they must
+    // not consume prefixes such as "商家区域识别1" as a real merchant field.
+    const rest = source.slice(matched[0].length).replace(/^[：:\\s]+/, "").trim();
     const result = rest || lines[i + 1] || "";
-    if (result && !/^\d{4}[-/年]|\d{2}:\d{2}|[¥￥]/.test(result)) return result.slice(0, 60);
+    if (
+      result &&
+      !/^(?:商家)?区域识别\\d*[：:]?$/.test(result) &&
+      !/^\\d{4}[-/年]|\\d{2}:\\d{2}|[¥￥]/.test(result)
+    ) return result.slice(0, 60);
   }
   return "";
 }
@@ -123,7 +131,7 @@ export function extractPhotoTransaction(
   rules: CategoryRule[] = [],
   now = new Date(),
 ): PhotoExtraction {
-  const lines = rawText.normalize("NFKC").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = rawText.normalize("NFKC").split(/\r?\n/).map((line) => line.trim()).filter((line) => Boolean(line) && !/^(?:商家)?区域识别\d*[：:]?$/.test(line));
   const text = lines.join("\n");
   if (!text.trim()) throw new Error("未识别到文字，请换一张清晰的交易详情截图");
   if (/交易关闭|交易失败|支付失败|订单取消|订单已取消|退款中|退款处理中/.test(text))
@@ -136,8 +144,8 @@ export function extractPhotoTransaction(
   const merchant = labeledText(
     lines,
     type === "income"
-      ? /^(?:付款方|交易对方|对方账户|商家|商户全称|商户名称)\s*[：:]?/
-      : /^(?:商户全称|商户名称|收款方|交易对方|商家|商户)\s*[：:]?/,
+      ? /^(?:付款方|交易对方|对方账户|商户全称|商户名称|商家)(?=\s|[:：])\s*[：:]?/
+      : /^(?:商户全称|商户名称|收款方|交易对方|商家)(?=\s|[:：])\s*[：:]?/,
   ) || detectMerchant(text);
   const goods = labeledText(lines, /^(?:商品说明|商品名称|商品详情|商品描述|交易商品)\s*[：:]?/);
   const title = goods || merchant || "截图账单（请填写商家或备注）";
