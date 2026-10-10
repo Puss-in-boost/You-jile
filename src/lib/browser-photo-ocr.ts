@@ -140,7 +140,7 @@ export async function recognizePaymentScreenshot(
           await worker.setParameters({ tessedit_pageseg_mode: trial.psm });
           const header = await croppedCanvas(file, trial.region, trial.binary);
           const recognized = (await worker.recognize(header)).data.text.trim();
-          if (recognized) results.push("商家区域识别" + (index + 1) + ":\n" + recognized);
+          if (recognized) results.push(recognized);
         } catch {
           // Keep full-page OCR. Missing details require manual confirmation.
         }
