@@ -124,28 +124,28 @@ export async function recognizePaymentScreenshot(
     const fullText = (await worker.recognize(file)).data.text;
     const results = [fullText];
 
-    // Chinese merchant labels are small and often absent from whole-page OCR.
-    // Retry based on whether a merchant was detected, not merely whether some
-    // Chinese characters happened to appear elsewhere on the image.
+    // PSM 7 often mistakes short Chinese merchant text beside an app logo
+    // for Latin characters. A focused top-left crop with text-block PSM 6
+    // successfully recovered the merchant in the supplied payment example.
     if (!detectMerchant(fullText)) {
-      try {
-        onProgress("正在聚焦识别顶部商家名称…");
-        // Remove the left-side app/logo emblem and the large price area.
-        // Keep a color crop as well as a contrast-enhanced version: thresholding
-        // can erase thin strokes in gray payment UIs.
-        const region = { x: 0.05, y: 0, w: 0.9, h: 0.23 };
-        await worker.setParameters({ tessedit_pageseg_mode: "7" });
-        const colorHeader = await croppedCanvas(file, region, false);
-        results.push((await worker.recognize(colorHeader)).data.text);
-        if (!detectMerchant(results.join("\n"))) {
-          const thresholdHeader = await croppedCanvas(file, region, true);
-          results.push((await worker.recognize(thresholdHeader)).data.text);
+      const trials = [
+        { region: { x: 0.03, y: 0.015, w: 0.62, h: 0.18 }, binary: false, psm: "6" },
+        { region: { x: 0.03, y: 0.015, w: 0.62, h: 0.18 }, binary: true, psm: "6" },
+        { region: { x: 0, y: 0, w: 1, h: 0.25 }, binary: false, psm: "11" },
+      ];
+      for (const [index, trial] of trials.entries()) {
+        if (detectMerchant(results.join("\n"))) break;
+        try {
+          onProgress("正在单独识别中文商家（" + (index + 1) + "/" + trials.length + "）…");
+          await worker.setParameters({ tessedit_pageseg_mode: trial.psm });
+          const header = await croppedCanvas(file, trial.region, trial.binary);
+          const recognized = (await worker.recognize(header)).data.text.trim();
+          if (recognized) results.push("商家区域识别" + (index + 1) + ":\n" + recognized);
+        } catch {
+          // Keep full-page OCR. Missing details require manual confirmation.
         }
-      } catch {
-        // Keep recognized payment text even when image cropping fails.
       }
     }
-
     if (!hasAmount(results.join("\n"))) {
       try {
         onProgress("正在放大识别支付金额…");
