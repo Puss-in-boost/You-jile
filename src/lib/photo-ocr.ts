@@ -109,17 +109,17 @@ function scanDate(input: string, now: Date): string {
 function labeledText(lines: string[], labels: RegExp): string {
   for (let i = 0; i < lines.length; i++) {
     const source = lines[i];
-    if (/^(?:商家)?区域识别\\d*[：:]?$/.test(source)) continue;
+    if (/^(?:商家)?区域识别\d*[：:]?$/.test(source)) continue;
     const matched = labels.exec(source);
     if (!matched) continue;
     // Regexes for field labels also accept spaces in OCR output, but they must
     // not consume prefixes such as "商家区域识别1" as a real merchant field.
-    const rest = source.slice(matched[0].length).replace(/^[：:\\s]+/, "").trim();
+    const rest = source.slice(matched[0].length).replace(/^[：:\s]+/, "").trim();
     const result = rest || lines[i + 1] || "";
     if (
       result &&
-      !/^(?:商家)?区域识别\\d*[：:]?$/.test(result) &&
-      !/^\\d{4}[-/年]|\\d{2}:\\d{2}|[¥￥]/.test(result)
+      !/^(?:商家)?区域识别\d*[：:]?$/.test(result) &&
+      !/^\d{4}[-/年]|\d{2}:\d{2}|[¥￥]/.test(result)
     ) return result.slice(0, 60);
   }
   return "";
