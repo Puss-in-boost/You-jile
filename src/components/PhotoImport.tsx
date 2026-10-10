@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { X, ImagePlus } from "lucide-react";
 import { accounts, categories, getDisplayEmoji, getSubcategories } from "@/lib/categories";
 import { extractPhotoTransaction, photoDuplicateCandidates } from "@/lib/photo-ocr";
+import { classifyTitle } from "@/lib/parser";
 import type { CategoryRule, Draft, Transaction } from "@/types";
 
 type Props = {
@@ -34,6 +35,27 @@ export function PhotoImport({ rows, rules, busy, offline, onClose, onSave }: Pro
     closed.current = true;
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
   }, []);
+
+  function updateMerchant(value: string) {
+    setDraft((current) => {
+      if (!current) return null;
+      const next = { ...current, merchant: value };
+      // A supplied merchant can resolve the generic OCR fallback, but must
+      // never overwrite a specific category the user has already selected.
+      if (current.type === "expense" && (current.category === "其他" || !current.merchant)) {
+        const found = classifyTitle(value, rules);
+        if (found.category !== "其他" && found.type === "expense") {
+          next.category = found.category;
+          next.subcategory = found.subcategory;
+          next.emoji = found.emoji;
+          if (current.title.startsWith("截图账单（请填写")) next.title = value || current.title;
+        }
+      }
+      return next;
+    });
+    setConfirmed(false);
+    setAllowDuplicate(false);
+  }
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => current ? { ...current, [key]: value } : null);
@@ -139,7 +161,7 @@ export function PhotoImport({ rows, rules, busy, offline, onClose, onSave }: Pro
           </div>
           <label className="field-label">金额（元）<input type="number" min="0.01" max="9999999999.99" step="0.01" required value={draft.amount} onChange={(e) => update("amount", e.target.value)} placeholder="请核对实付金额"/></label>
           <label className="field-label">日期<input type="date" required value={draft.date} max="9999-12-31" onChange={(e) => update("date", e.target.value)}/></label>
-          <label className="field-label">商家 / 交易对方<input maxLength={60} value={draft.merchant ?? ""} onChange={(e) => update("merchant", e.target.value)}/></label>
+          <label className="field-label">商家 / 交易对方<input maxLength={60} value={draft.merchant ?? ""} onChange={(e) => updateMerchant(e.target.value)}/></label>
           <label className="field-label">标题<input required maxLength={120} value={draft.title} onChange={(e) => update("title", e.target.value)}/></label>
           <label className="field-label">分类<select value={draft.category} onChange={(e) => {
             const category = e.target.value;
