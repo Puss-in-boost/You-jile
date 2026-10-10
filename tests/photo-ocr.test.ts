@@ -64,3 +64,17 @@ test("bare numbers are never accepted from untrusted or conflicting screenshots"
   assert.equal(extractPhotoTransaction("Paid by Balance\n25.74\n26.12", [], now).draft.amount, "");
   assert.equal(extractPhotoTransaction("支付成功\n余额 80.00\n优惠 10.00", [], now).draft.amount, "");
 });
+
+test("OCR debug headings must never become merchants or titles", () => {
+  const original = "雷 mez\nPaid by Balance\n25.74\nTransaction Details\n商家区域识别1:\n雷 mz";
+  const draft = extractPhotoTransaction(original, [], now).draft;
+  assert.equal(draft.amount, "25.74");
+  assert.equal(draft.merchant, "");
+  assert.equal(draft.category, "其他");
+  assert.match(draft.title, /截图账单/);
+});
+test("ordinary merchant field labels still work without a colon", () => {
+  const draft = extractPhotoTransaction("微信支付\n支付成功\n支付金额 20.00\n商家 盒马\n交易时间 2026-10-05", [], now).draft;
+  assert.equal(draft.merchant, "盒马");
+  assert.equal(draft.category, "餐饮");
+});
