@@ -46,7 +46,26 @@ function pickAmount(lines: string[]): string {
     }
   }
   const fallback = [...new Set(candidates)];
-  return fallback.length === 1 ? fallback[0] : "";
+  if (fallback.length === 1) return fallback[0];
+  if (fallback.length > 1) return "";
+
+  // OCR can omit the currency glyph in a large, isolated "25.74" amount.
+  // Only accept a *unique* two-decimal figure on a payment-success screen;
+  // never interpret arbitrary integers, dates, discounts, or balances.
+  if (!/支付成功|付款成功|交易成功|paid by|payment successful|successfully paid/i.test(lines.join(" ")))
+    return "";
+  const bare: string[] = [];
+  for (const line of lines) {
+    if (/余额|优惠|抵扣|红包|原价|手续费|资产|额度|银行卡|积分|折扣|日期|时间|balance|discount|saved|coupon|total assets/i.test(line)) continue;
+    if (/^\s*\d{4}[-/.]|^\s*\d{1,2}:\d{2}/.test(line)) continue;
+    const match = line.match(/^\s*(?:[¥￥Yy]\s*)?(\d{1,9}\.\d{2})\s*(?:元)?\s*$/);
+    if (match) {
+      const value = currencyValue(match[1]);
+      if (value) bare.push(value);
+    }
+  }
+  const distinctBare = [...new Set(bare)];
+  return distinctBare.length === 1 ? distinctBare[0] : "";
 }
 
 function validDate(y: number, m: number, d: number): string {
@@ -110,8 +129,8 @@ export function extractPhotoTransaction(
   if (/交易关闭|交易失败|支付失败|订单取消|订单已取消|退款中|退款处理中/.test(text))
     throw new Error("截图可能是失败、取消或处理中的交易，请核实后手动记账");
 
-  const isRefund = /退款成功|已退款|退款金额|退款到账/.test(text);
-  const incoming = isRefund || /收款成功|收款到账|已收款|收入\s*[¥￥]|收到转账|转入成功/.test(text);
+  const isRefund = /退款成功|已退款|退款金额|退款到账|refund successful|refunded/i.test(text);
+  const incoming = isRefund || /收款成功|收款到账|已收款|收入\s*[¥￥]|收到转账|转入成功|payment received|received payment/i.test(text);
   const type = incoming ? "income" : "expense";
   const platform = /支付宝|余额宝/.test(text) ? "支付宝" : /微信支付|微信|零钱通|微信零钱/.test(text) ? "微信" : "未指定";
   const merchant = labeledText(
@@ -119,7 +138,7 @@ export function extractPhotoTransaction(
     type === "income"
       ? /^(?:付款方|交易对方|对方账户|商家|商户全称|商户名称)\s*[：:]?/
       : /^(?:商户全称|商户名称|收款方|交易对方|商家|商户)\s*[：:]?/,
-  );
+  ) || detectMerchant(text);
   const goods = labeledText(lines, /^(?:商品说明|商品名称|商品详情|商品描述|交易商品)\s*[：:]?/);
   const title = goods || merchant || "截图账单（请填写商家或备注）";
   const categoryInfo = classifyTitle(title, rules);
@@ -129,10 +148,11 @@ export function extractPhotoTransaction(
   const date = scanDate(text, now);
   const warnings: string[] = [];
   if (!amount) warnings.push("截图中有多个金额或金额不清晰，请人工填写实付/到账金额");
+  else if (!/[¥￥]\s*\d/.test(text)) warnings.push("金额来自无货币符号的 OCR 数字，请重点核实");
   if (!date) warnings.push("未能确定唯一交易日期，请人工填写日期");
   if (!merchant) warnings.push("未确定收付款商家，请核对标题和商家");
   if (platform === "未指定") warnings.push("未检测到微信或支付宝标识，请确认支付账户");
-  if (!incoming && !/支出|付款成功|支付成功|交易成功|扣款成功|付款金额|支付金额|实付金额/.test(text))
+  if (!incoming && !/支出|付款成功|支付成功|交易成功|扣款成功|付款金额|支付金额|实付金额|paid by|payment successful|successfully paid/i.test(text))
     warnings.push("收支方向无法明确判断，暂按支出预填，请确认");
   if (!goods) warnings.push("截图没有商品明细，分类只是根据商家推测，可自行修改");
 
