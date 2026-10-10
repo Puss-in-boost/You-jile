@@ -2,6 +2,8 @@
  * Local-only OCR. Browser downloads the Tesseract engine/models from public
  * CDNs, but screenshots and OCR results never leave the browser.
  */
+import { detectMerchant } from "./purchase-dimensions";
+
 type Recognizable = File | HTMLCanvasElement;
 type OCRWorker = {
   recognize(image: Recognizable): Promise<{ data: { text: string } }>;
@@ -53,6 +55,7 @@ function loadEngine(): Promise<OCRLibrary> {
 async function croppedCanvas(
   file: File,
   rect: { x: number; y: number; w: number; h: number },
+  binary = true,
 ): Promise<HTMLCanvasElement> {
   const bitmap = await createImageBitmap(file);
   try {
@@ -69,6 +72,8 @@ async function croppedCanvas(
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = "high";
     context.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+    if (!binary) return canvas;
 
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
     const data = pixels.data;
@@ -117,27 +122,39 @@ export async function recognizePaymentScreenshot(
       },
     });
     const fullText = (await worker.recognize(file)).data.text;
-    const chineseCount = (fullText.match(/[\u3400-\u9fff]/g) ?? []).length;
-    if (hasAmount(fullText) && chineseCount >= 2) return fullText;
-
     const results = [fullText];
-    try {
-      // Page segmentation 6 handles compact single blocks and large isolated
-      // prices better than the default full-page layout analysis.
-      await worker.setParameters({ tessedit_pageseg_mode: "6" });
-      if (chineseCount < 2) {
-        onProgress("正在放大识别商家名称…");
-        const header = await croppedCanvas(file, { x: 0, y: 0, w: 1, h: 0.42 });
-        results.push((await worker.recognize(header)).data.text);
+
+    // Chinese merchant labels are small and often absent from whole-page OCR.
+    // Retry based on whether a merchant was detected, not merely whether some
+    // Chinese characters happened to appear elsewhere on the image.
+    if (!detectMerchant(fullText)) {
+      try {
+        onProgress("正在聚焦识别顶部商家名称…");
+        // Remove the left-side app/logo emblem and the large price area.
+        // Keep a color crop as well as a contrast-enhanced version: thresholding
+        // can erase thin strokes in gray payment UIs.
+        const region = { x: 0.05, y: 0, w: 0.9, h: 0.23 };
+        await worker.setParameters({ tessedit_pageseg_mode: "7" });
+        const colorHeader = await croppedCanvas(file, region, false);
+        results.push((await worker.recognize(colorHeader)).data.text);
+        if (!detectMerchant(results.join("\n"))) {
+          const thresholdHeader = await croppedCanvas(file, region, true);
+          results.push((await worker.recognize(thresholdHeader)).data.text);
+        }
+      } catch {
+        // Keep recognized payment text even when image cropping fails.
       }
-      if (!hasAmount(results.join("\n"))) {
+    }
+
+    if (!hasAmount(results.join("\n"))) {
+      try {
         onProgress("正在放大识别支付金额…");
+        await worker.setParameters({ tessedit_pageseg_mode: "6" });
         const amountRegion = await croppedCanvas(file, { x: 0.08, y: 0.22, w: 0.84, h: 0.58 });
         results.push((await worker.recognize(amountRegion)).data.text);
+      } catch {
+        // The user can still supply the missing amount manually.
       }
-    } catch {
-      // An unsupported browser canvas feature must not discard OCR text that
-      // was already successfully recognized. The user can still edit fields.
     }
     return results.filter(Boolean).join("\n");
   } finally {
