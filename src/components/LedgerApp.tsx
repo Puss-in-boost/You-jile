@@ -19,6 +19,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { EntryModal } from "./EntryModal";
+import { PhotoImport } from "./PhotoImport";
 import { BackfillMode } from "./BackfillMode";
 import { InstallPrompt, usePWA } from "./InstallPrompt";
 import { Profile } from "./Profile";
@@ -124,6 +125,7 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
   const [editing, setEditing] = useState<Transaction | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
   const [backfillOpen, setBackfillOpen] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const [quickText, setQuickText] = useState("");
   const [quickError, setQuickError] = useState("");
@@ -284,8 +286,8 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
                   <button type="button" disabled title="语音记账尚未上线">
                     <Mic size={15} /> 说一笔 <em>即将上线</em>
                   </button>
-                  <button type="button" disabled title="拍照识别尚未上线">
-                    <Camera size={15} /> 拍一笔 <em>即将上线</em>
+                  <button type="button" onClick={() => setPhotoOpen(true)}>
+                    <Camera size={15} /> 截图记账
                   </button>
                   <button type="button" onClick={openAdd}>
                     <WalletCards size={15} /> 手动记账
@@ -534,6 +536,10 @@ export function LedgerApp({ view = "home" }: { view?: View }) {
         })}
       </nav>
 
+      {photoOpen && (
+        <PhotoImport rows={ledger.rows} rules={ledger.rules} busy={ledger.busy} offline={pwa.offline}
+          onSave={ledger.save} onClose={() => setPhotoOpen(false)} />
+      )}
       {backfillOpen && (
         <BackfillMode
           rows={ledger.rows}
